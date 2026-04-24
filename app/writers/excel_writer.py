@@ -56,8 +56,13 @@ def write_output(
     reserve_end = template_data.reserve_end_row + row_shift if template_data.reserve_end_row else 0
 
     # Determine which dates from result are new (not already in the template)
+    # Skip dates where nobody received a seat (all employees are day_off/remote/vacation)
     all_result_dates = {asgn.date for asgn in result.assignments}
-    new_dates = sorted(d for d in all_result_dates if d not in existing_date_cols)
+    dates_with_office = {asgn.date for asgn in result.assignments if asgn.seat_id is not None}
+    new_dates = sorted(
+        d for d in all_result_dates
+        if d not in existing_date_cols and d in dates_with_office
+    )
 
     if not new_dates:
         _write_validation_sheet(wb, result, validation_sheet_name)
