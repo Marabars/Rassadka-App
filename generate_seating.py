@@ -35,13 +35,10 @@ def run(
     from app.readers.template_reader import read_template
     template_data = read_template(template_path, template_sheet)
 
-    # Only generate for dates present in the template
-    target_dates = set(template_data.date_cols.keys())
-
     # --- Read choices ---
     from app.readers.choices_reader import read_choices
     choices, choice_issues = read_choices(
-        choices_path, choices_sheet, status_mapping, target_dates=target_dates
+        choices_path, choices_sheet, status_mapping
     )
 
     # --- Determine available seats ---

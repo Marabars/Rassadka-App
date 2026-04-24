@@ -80,7 +80,7 @@ class SeatingApp(tk.Tk):
         self._build_file_row(2, "Файл выборов *", self._var_choices, save=False)
         self._cb_choices_sheet = self._build_sheet_row(3, "Лист (выборы) *", self._var_choices_sheet)
 
-        self._build_file_row(4, "Шаблон рассадки *", self._var_template, save=False)
+        self._build_file_row(4, "Рассадка прошлого месяца *", self._var_template, save=False)
         self._cb_template_sheet = self._build_sheet_row(5, "Лист (шаблон) *", self._var_template_sheet)
 
         self._build_file_row(6, "Выходной файл *", self._var_output, save=True)

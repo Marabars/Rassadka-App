@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import datetime
 import shutil
-from copy import copy
 from pathlib import Path
 from typing import Optional
 
 import openpyxl
-from openpyxl.styles import PatternFill
+import openpyxl.utils
 
 from app.domain.models import GenerationResult
 from app.readers.template_reader import TemplateData
+from app.utils.excel_utils import copy_cell_style
 from app.utils.normalization import seat_to_excel_value
 
 _RESERVE_COUNT_LABEL = "резерв"
@@ -24,7 +24,7 @@ def write_output(
     validation_sheet_name: str,
     add_new_employees: bool = True,
 ) -> None:
-    """Copy template, inject new seating, write Validation Report sheet."""
+    """Copy template and append new date columns from choices. Historical columns are preserved."""
     shutil.copy2(template_path, output_path)
 
     wb = openpyxl.load_workbook(output_path)
@@ -38,50 +38,86 @@ def write_output(
     # Find employees in choices that are not in the template
     new_employees = _new_employees_from_result(result, template_data.employee_order)
 
-    date_cols = template_data.date_cols
+    existing_date_cols = template_data.date_cols
     first_emp_row = template_data.first_employee_row
     last_emp_row = template_data.last_employee_row
 
-    # Insert rows for new employees BEFORE writing anything (keeps row indices stable)
+    # Insert rows for new employees BEFORE anything else (keeps row indices stable)
     row_shift = 0
     if add_new_employees and new_employees:
         insert_at = last_emp_row + 1
         ws.insert_rows(insert_at, amount=len(new_employees))
         row_shift = len(new_employees)
-        # Write names for new employees
         for offset, name in enumerate(new_employees):
             ws.cell(row=insert_at + offset, column=2).value = name
 
-    # Adjusted reserve block rows after insertion
+    # Adjust reserve block rows after row insertion
     reserve_start = template_data.reserve_start_row + row_shift if template_data.reserve_start_row else 0
     reserve_end = template_data.reserve_end_row + row_shift if template_data.reserve_end_row else 0
 
-    # Clear old seat data from employee rows (template employees + newly inserted rows)
-    total_last = last_emp_row + row_shift
-    for row_idx in range(first_emp_row, total_last + 1):
-        for col_idx in date_cols.values():
-            ws.cell(row=row_idx, column=col_idx).value = None
+    # Determine which dates from result are new (not already in the template)
+    all_result_dates = {asgn.date for asgn in result.assignments}
+    new_dates = sorted(d for d in all_result_dates if d not in existing_date_cols)
 
-    # Write seat assignments for template employees
+    if not new_dates:
+        _write_validation_sheet(wb, result, validation_sheet_name)
+        wb.save(output_path)
+        return
+
+    # Add new date header columns to the sheet
+    new_date_cols = _add_new_date_columns(
+        ws, new_dates, existing_date_cols, template_data.header_row
+    )
+
+    # Write seat assignments for all employees in new date columns
     for offset, employee_name in enumerate(template_data.employee_order):
         row_idx = first_emp_row + offset
-        _write_employee_seats(ws, row_idx, employee_name, date_cols, assignment_lookup)
+        _write_employee_seats(ws, row_idx, employee_name, new_date_cols, assignment_lookup)
 
-    # Write seat assignments for new employees
     if add_new_employees and new_employees:
         for offset, employee_name in enumerate(new_employees):
             row_idx = last_emp_row + 1 + offset
-            _write_employee_seats(ws, row_idx, employee_name, date_cols, assignment_lookup)
+            _write_employee_seats(ws, row_idx, employee_name, new_date_cols, assignment_lookup)
 
-    # Rewrite reserve block with adjusted row indices
+    # Write reserve seats and counts for new dates
     if reserve_start:
-        _write_reserve_block(ws, reserve_start, reserve_end, date_cols, result.reserve_by_date)
+        _write_reserve_block(ws, reserve_start, reserve_end, new_date_cols, result.reserve_by_date)
 
-    # Update РЕЗЕРВ summary count row
-    _update_reserve_count_row(ws, template_data.header_row, date_cols, result.reserve_by_date)
+    _update_reserve_count_row(ws, template_data.header_row, new_date_cols, result.reserve_by_date)
 
     _write_validation_sheet(wb, result, validation_sheet_name)
     wb.save(output_path)
+
+
+def _add_new_date_columns(
+    ws,
+    new_dates: list[datetime.date],
+    existing_date_cols: dict[datetime.date, int],
+    header_row: int,
+) -> dict[datetime.date, int]:
+    """Append new date columns after the last existing column. Returns date -> col_idx mapping."""
+    next_col = ws.max_column + 1
+    last_existing_col = max(existing_date_cols.values()) if existing_date_cols else None
+
+    new_date_cols: dict[datetime.date, int] = {}
+    for date in new_dates:
+        cell = ws.cell(row=header_row, column=next_col)
+        cell.value = datetime.datetime(date.year, date.month, date.day)
+
+        if last_existing_col:
+            src_header = ws.cell(row=header_row, column=last_existing_col)
+            copy_cell_style(src_header, cell)
+            # Match column width
+            src_letter = openpyxl.utils.get_column_letter(last_existing_col)
+            dst_letter = openpyxl.utils.get_column_letter(next_col)
+            src_width = ws.column_dimensions[src_letter].width
+            if src_width:
+                ws.column_dimensions[dst_letter].width = src_width
+
+        new_date_cols[date] = next_col
+        next_col += 1
+
+    return new_date_cols
 
 
 def _write_employee_seats(ws, row_idx, employee_name, date_cols, assignment_lookup):
@@ -100,7 +136,7 @@ def _get_main_sheet(wb: openpyxl.Workbook) -> str:
 
 
 def _new_employees_from_result(result: GenerationResult, template_order: list[str]) -> list[str]:
-    """Return employees from result that do not appear in the template, in stable order."""
+    """Return employees from result not in the template, in stable order."""
     template_set = set(template_order)
     seen: set[str] = set()
     extra: list[str] = []
