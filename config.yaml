@@ -1,0 +1,18 @@
+input:
+  choices_sheet_name: "2026"
+  template_sheet_name: "График"
+
+status_mapping:
+  office: ["офис", "office"]
+  remote: ["удаленно", "удалённо", "remote", "wfh"]
+  vacation: ["отпуск", "vacation", "ooo"]
+  day_off: ["выходной", "day off", "выходной день"]
+
+output:
+  validation_report_sheet_name: "Validation Report"
+  add_new_employees_to_end: true
+
+algorithm:
+  preserve_previous_seat: true
+  fallback_to_any_free_seat: true
+  treat_unknown_status_as_absent: true
