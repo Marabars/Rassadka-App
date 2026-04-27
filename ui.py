@@ -90,30 +90,37 @@ class SeatingApp(tk.Tk):
             row=8, column=0, columnspan=3, sticky="ew", padx=12, pady=(4, 0)
         )
 
+        # Seats section
+        self._build_seats_section(9)
+
+        ttk.Separator(self, orient="horizontal").grid(
+            row=13, column=0, columnspan=3, sticky="ew", padx=12, pady=(4, 0)
+        )
+
         # Generate button
         self._btn_generate = ttk.Button(
             self, text="  Сгенерировать  ", command=self._on_generate
         )
-        self._btn_generate.grid(row=9, column=0, columnspan=3, pady=10)
+        self._btn_generate.grid(row=14, column=0, columnspan=3, pady=10)
 
         ttk.Separator(self, orient="horizontal").grid(
-            row=10, column=0, columnspan=3, sticky="ew", padx=12
+            row=15, column=0, columnspan=3, sticky="ew", padx=12
         )
 
         # Log
         ttk.Label(self, text="Лог:", font=("Segoe UI", 9)).grid(
-            row=11, column=0, columnspan=3, sticky="w", padx=14, pady=(6, 2)
+            row=16, column=0, columnspan=3, sticky="w", padx=14, pady=(6, 2)
         )
         self._log = scrolledtext.ScrolledText(
             self, width=72, height=10, state="disabled",
             font=("Consolas", 9), bg="#1e1e1e", fg="#d4d4d4",
             insertbackground="white", relief="flat", bd=0,
         )
-        self._log.grid(row=12, column=0, columnspan=3, padx=14, pady=(0, 6))
+        self._log.grid(row=17, column=0, columnspan=3, padx=14, pady=(0, 6))
 
         # Status + open button
         bottom = ttk.Frame(self)
-        bottom.grid(row=13, column=0, columnspan=3, sticky="ew", padx=12, pady=(0, 12))
+        bottom.grid(row=18, column=0, columnspan=3, sticky="ew", padx=12, pady=(0, 12))
         bottom.columnconfigure(0, weight=1)
 
         self._status_var = tk.StringVar(value="Готов к работе")
@@ -146,6 +153,72 @@ class SeatingApp(tk.Tk):
         cb.grid(row=row, column=1, sticky="ew", pady=2)
         return cb
 
+    def _build_seats_section(self, start_row: int):
+        ttk.Label(self, text="Доступные места:", font=("Segoe UI", 9)).grid(
+            row=start_row, column=0, columnspan=3, sticky="w", padx=14, pady=(6, 2)
+        )
+
+        frame = ttk.Frame(self)
+        frame.grid(row=start_row + 1, column=0, columnspan=3, sticky="ew", padx=14)
+        frame.columnconfigure(0, weight=1)
+
+        self._seats_listbox = tk.Listbox(
+            frame, height=6, selectmode=tk.EXTENDED,
+            font=("Consolas", 9), activestyle="none",
+        )
+        self._seats_listbox.grid(row=0, column=0, sticky="ew")
+        sb = ttk.Scrollbar(frame, orient="vertical", command=self._seats_listbox.yview)
+        sb.grid(row=0, column=1, sticky="ns")
+        self._seats_listbox.config(yscrollcommand=sb.set)
+
+        ctrl = ttk.Frame(self)
+        ctrl.grid(row=start_row + 2, column=0, columnspan=3, sticky="ew", padx=14, pady=(2, 4))
+
+        ttk.Label(ctrl, text="Добавить:").pack(side="left")
+        self._var_new_seat = tk.StringVar()
+        entry = ttk.Entry(ctrl, textvariable=self._var_new_seat, width=14)
+        entry.pack(side="left", padx=(4, 4))
+        entry.bind("<Return>", lambda _: self._on_add_seat())
+        ttk.Button(ctrl, text="Добавить", command=self._on_add_seat).pack(side="left")
+        ttk.Button(ctrl, text="Удалить выбранное", command=self._on_delete_seat).pack(side="right")
+
+    # ------------------------------------------------------------------
+    # Seats management
+    # ------------------------------------------------------------------
+
+    def _populate_seats_from_template(self, path: str):
+        """Load seat list from template file and fill the listbox."""
+        if not path or not Path(path).exists():
+            return
+        try:
+            sys.path.insert(0, str(_APP_DIR))
+            from app.readers.template_reader import read_template
+            sheet = self._var_template_sheet.get() or None
+            if not sheet:
+                return
+            td = read_template(Path(path), sheet)
+            self._seats_listbox.delete(0, tk.END)
+            for seat in td.all_seats:
+                self._seats_listbox.insert(tk.END, seat)
+        except Exception:
+            pass  # silently skip — user can still edit manually
+
+    def _on_add_seat(self):
+        raw = self._var_new_seat.get().strip()
+        if not raw:
+            return
+        existing = list(self._seats_listbox.get(0, tk.END))
+        if raw not in existing:
+            self._seats_listbox.insert(tk.END, raw)
+        self._var_new_seat.set("")
+
+    def _on_delete_seat(self):
+        for idx in reversed(self._seats_listbox.curselection()):
+            self._seats_listbox.delete(idx)
+
+    def _get_seats(self) -> list[str]:
+        return list(self._seats_listbox.get(0, tk.END))
+
     # ------------------------------------------------------------------
     # File dialogs + sheet auto-detect
     # ------------------------------------------------------------------
@@ -161,7 +234,9 @@ class SeatingApp(tk.Tk):
         self._refresh_sheet_combo(self._var_choices.get(), self._cb_choices_sheet, self._var_choices_sheet, "2026")
 
     def _on_template_path_change(self):
-        self._refresh_sheet_combo(self._var_template.get(), self._cb_template_sheet, self._var_template_sheet, "График")
+        path = self._var_template.get()
+        self._refresh_sheet_combo(path, self._cb_template_sheet, self._var_template_sheet, "График")
+        self._populate_seats_from_template(path)
 
     def _refresh_sheet_combo(self, path: str, cb: ttk.Combobox, var: tk.StringVar, preferred: str):
         """Load sheet names from file and update combobox. Pick preferred name if present."""
@@ -215,12 +290,15 @@ class SeatingApp(tk.Tk):
         self._log_clear()
         self._output_path = None
 
+        seats = self._get_seats() or None
+
         thread = threading.Thread(
             target=self._run_pipeline,
             args=(
                 Path(choices), Path(template), Path(output),
                 Path(omap) if omap else None,
                 choices_sheet, template_sheet,
+                seats,
             ),
             daemon=True,
         )
@@ -231,6 +309,7 @@ class SeatingApp(tk.Tk):
         self,
         choices: Path, template: Path, output: Path,
         omap: Path | None, choices_sheet: str, template_sheet: str,
+        seats: list[str] | None = None,
     ):
         buf = io.StringIO()
         try:
@@ -244,6 +323,7 @@ class SeatingApp(tk.Tk):
                     office_map_path=omap,
                     choices_sheet_override=choices_sheet,
                     template_sheet_override=template_sheet,
+                    seats_override=seats,
                 )
             for line in buf.getvalue().splitlines():
                 if line.strip():

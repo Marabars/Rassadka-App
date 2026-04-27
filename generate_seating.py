@@ -22,6 +22,7 @@ def run(
     office_map_path: Path | None = None,
     choices_sheet_override: str | None = None,
     template_sheet_override: str | None = None,
+    seats_override: list[str] | None = None,
 ) -> int:
     config = load_config(config_path)
 
@@ -42,7 +43,9 @@ def run(
     )
 
     # --- Determine available seats ---
-    if office_map_path:
+    if seats_override:
+        all_available_seats = seats_override
+    elif office_map_path:
         from app.readers.office_map_reader import read_office_map
         all_available_seats = read_office_map(office_map_path)
     else:
