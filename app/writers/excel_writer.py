@@ -11,7 +11,7 @@ import openpyxl.utils
 from app.domain.models import GenerationResult
 from app.readers.template_reader import TemplateData
 from app.utils.excel_utils import copy_cell_style
-from app.utils.normalization import seat_to_excel_value
+from app.utils.normalization import seat_to_excel_value, name_match_key
 
 _RESERVE_COUNT_LABEL = "резерв"
 
@@ -30,10 +30,11 @@ def write_output(
     wb = openpyxl.load_workbook(output_path)
     ws = wb[_get_main_sheet(wb)]
 
-    # Build lookup: employee_name -> date -> seat_id
+    # Build lookup: name_match_key(employee_name) -> date -> seat_id
+    # Keyed by fuzzy key so abbreviated names map to the same bucket as the full name.
     assignment_lookup: dict[str, dict[datetime.date, Optional[str]]] = {}
     for asgn in result.assignments:
-        assignment_lookup.setdefault(asgn.employee_name, {})[asgn.date] = asgn.seat_id
+        assignment_lookup.setdefault(name_match_key(asgn.employee_name), {})[asgn.date] = asgn.seat_id
 
     # Find employees in choices that are not in the template
     new_employees = _new_employees_from_result(result, template_data.employee_order)
@@ -137,7 +138,7 @@ def _add_new_date_columns(
 
 
 def _write_employee_seats(ws, row_idx, employee_name, date_cols, assignment_lookup):
-    date_assignments = assignment_lookup.get(employee_name, {})
+    date_assignments = assignment_lookup.get(name_match_key(employee_name), {})
     for date, col_idx in date_cols.items():
         seat_id = date_assignments.get(date)
         if seat_id is not None:
@@ -152,13 +153,16 @@ def _get_main_sheet(wb: openpyxl.Workbook) -> str:
 
 
 def _new_employees_from_result(result: GenerationResult, template_order: list[str]) -> list[str]:
-    """Return employees from result not in the template, in stable order."""
-    template_set = set(template_order)
+    """Return employees from result not in the template, in stable order.
+
+    Comparison is done by name_match_key so abbreviated forms are not treated as new employees.
+    """
+    template_keys = {name_match_key(n) for n in template_order}
     seen: set[str] = set()
     extra: list[str] = []
     for asgn in result.assignments:
         name = asgn.employee_name
-        if name not in template_set and name not in seen:
+        if name_match_key(name) not in template_keys and name not in seen:
             seen.add(name)
             extra.append(name)
     return extra
