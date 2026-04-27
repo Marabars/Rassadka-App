@@ -51,9 +51,20 @@ def write_output(
         for offset, name in enumerate(new_employees):
             ws.cell(row=insert_at + offset, column=2).value = name
 
-    # Adjust reserve block rows after row insertion
-    reserve_start = template_data.reserve_start_row + row_shift if template_data.reserve_start_row else 0
-    reserve_end = template_data.reserve_end_row + row_shift if template_data.reserve_end_row else 0
+    # Compute reserve block position. If template has no "резерв мест" label, place 2 rows
+    # below the last employee row (which is the rule for real files).
+    if template_data.reserve_start_row:
+        reserve_start = template_data.reserve_start_row + row_shift
+    else:
+        reserve_start = last_emp_row + row_shift + 2
+
+    # reserve_end is always driven by actual data so all seats fit even when the
+    # template reserve block is shorter than the new month's reserve count.
+    max_reserve_count = max(
+        (len(seats) for seats in result.reserve_by_date.values()),
+        default=0,
+    )
+    reserve_end = reserve_start + max_reserve_count - 1 if max_reserve_count else reserve_start
 
     # Determine which dates from result are new (not already in the template)
     # Skip dates where nobody received a seat (all employees are day_off/remote/vacation)
@@ -85,7 +96,7 @@ def write_output(
             _write_employee_seats(ws, row_idx, employee_name, new_date_cols, assignment_lookup)
 
     # Write reserve seats and counts for new dates
-    if reserve_start:
+    if max_reserve_count:
         _write_reserve_block(ws, reserve_start, reserve_end, new_date_cols, result.reserve_by_date)
 
     _update_reserve_count_row(ws, template_data.header_row, new_date_cols, result.reserve_by_date)
