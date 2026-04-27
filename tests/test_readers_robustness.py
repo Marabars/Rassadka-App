@@ -115,3 +115,50 @@ def test_choices_reader_stops_after_many_consecutive_blanks():
     names = {c.employee_name for c in choices}
     assert "Alice" in names
     assert "Ghost" not in names  # beyond 3 consecutive blanks — correctly dropped
+
+
+# ── name_match_key / abbreviated name resolution ─────────────────────────────
+
+def test_name_match_key_full_name():
+    from app.utils.normalization import name_match_key
+    assert name_match_key("Дононбаев Марат Болотович") == "до марат болотович"
+
+
+def test_name_match_key_abbreviated():
+    from app.utils.normalization import name_match_key
+    assert name_match_key("До... Марат Болотович") == "до марат болотович"
+    assert name_match_key("До Марат Болотович") == "до марат болотович"
+
+
+def test_name_match_key_different_surnames_dont_collide():
+    from app.utils.normalization import name_match_key
+    # Дононбаев vs Дроздов — same 2 letters "др" would collide, but "до" vs "др" should not
+    assert name_match_key("Дононбаев Марат Болотович") != name_match_key("Дроздов Марат Болотович")
+
+
+def test_resolve_abbreviated_names_replaces_correctly():
+    from app.domain.models import EmployeeDayChoice, EmployeeStatus
+    from generate_seating import _resolve_abbreviated_names
+    import datetime
+
+    template_employees = ["Дононбаев Марат Болотович", "Драйзер Александр Михайлович"]
+    choices = [
+        EmployeeDayChoice("До... Марат Болотович", datetime.date(2026, 5, 4), EmployeeStatus.OFFICE),
+        EmployeeDayChoice("Др... Александр Михайлович", datetime.date(2026, 5, 4), EmployeeStatus.REMOTE),
+    ]
+    resolved = _resolve_abbreviated_names(choices, template_employees)
+    assert resolved[0].employee_name == "Дононбаев Марат Болотович"
+    assert resolved[1].employee_name == "Драйзер Александр Михайлович"
+
+
+def test_resolve_abbreviated_names_keeps_unknown_names():
+    from app.domain.models import EmployeeDayChoice, EmployeeStatus
+    from generate_seating import _resolve_abbreviated_names
+    import datetime
+
+    template_employees = ["Иванов Иван Иванович"]
+    choices = [
+        EmployeeDayChoice("Петров Пётр Петрович", datetime.date(2026, 5, 4), EmployeeStatus.OFFICE),
+    ]
+    resolved = _resolve_abbreviated_names(choices, template_employees)
+    assert resolved[0].employee_name == "Петров Пётр Петрович"

@@ -42,6 +42,10 @@ def run(
         choices_path, choices_sheet, status_mapping
     )
 
+    # Resolve abbreviated names (e.g. 'До... Марат Болотович') to the full
+    # canonical name from the template using a 2-letter surname prefix match.
+    choices = _resolve_abbreviated_names(choices, template_data.employee_order)
+
     # --- Determine available seats ---
     if seats_override:
         all_available_seats = seats_override
@@ -122,6 +126,33 @@ def main() -> None:
         office_map_path=args.office_map,
     )
     sys.exit(exit_code)
+
+
+def _resolve_abbreviated_names(
+    choices: list,
+    template_employees: list[str],
+) -> list:
+    """Replace abbreviated names in choices with the matching full name from the template.
+
+    Matching is done by name_match_key (2-letter surname prefix + first name + patronymic).
+    If no template match is found, the original name is kept unchanged.
+    """
+    from app.domain.models import EmployeeDayChoice
+    from app.utils.normalization import name_match_key
+
+    key_to_full = {name_match_key(n): n for n in template_employees}
+
+    resolved = []
+    for choice in choices:
+        full = key_to_full.get(name_match_key(choice.employee_name), choice.employee_name)
+        if full != choice.employee_name:
+            choice = EmployeeDayChoice(
+                employee_name=full,
+                date=choice.date,
+                status=choice.status,
+            )
+        resolved.append(choice)
+    return resolved
 
 
 if __name__ == "__main__":

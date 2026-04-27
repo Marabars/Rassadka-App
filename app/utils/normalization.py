@@ -34,3 +34,18 @@ def seat_to_excel_value(seat_id: str):
 def normalize_employee_name(name: str) -> str:
     """Normalize whitespace and casing for employee name matching."""
     return re.sub(r"\s+", " ", name.strip())
+
+
+def name_match_key(name: str) -> str:
+    """Compute a fuzzy match key: first 2 letters of surname + first name + patronymic.
+
+    Strips trailing dots/ellipsis from each word so that abbreviated forms
+    like 'До... Марат Болотович' match 'Дононбаев Марат Болотович'.
+    """
+    parts = [re.sub(r"[.…]+$", "", p) for p in name.strip().split()]
+    parts = [p for p in parts if p]
+    if not parts:
+        return name.lower()
+    surname_key = parts[0][:2].lower()
+    rest = " ".join(p.lower() for p in parts[1:])
+    return f"{surname_key} {rest}" if rest else surname_key
