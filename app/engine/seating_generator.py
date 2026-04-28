@@ -45,13 +45,22 @@ def generate_seating(
     for date in sorted(dates_employees.keys()):
         day_choices = dates_employees[date]
 
-        # Two-pass ordering: template employees first (preserve preferred seats),
-        # then new employees (get whatever is left).
+        # Priority ordering per date:
+        #   1. Template employees sorted by seat consistency (fewest preferred seats = most
+        #      stable = processed first so they always claim their habitual seat).
+        #      Employees with no history (0 seats) go last within the template group.
+        #   2. New employees (not in template) — get whatever remains.
+        def _template_sort_key(c: EmployeeDayChoice):
+            count = len(preferred_seats.get(c.employee_name, []))
+            # 0 → treated as infinity so history-less template employees go after
+            # those with any preference data, but still before new employees.
+            return (count if count > 0 else float("inf"), c.employee_name)
+
         if template_employees:
             ordered = (
                 sorted(
                     [c for c in day_choices if c.employee_name in template_employees],
-                    key=lambda c: c.employee_name,
+                    key=_template_sort_key,
                 )
                 + sorted(
                     [c for c in day_choices if c.employee_name not in template_employees],
