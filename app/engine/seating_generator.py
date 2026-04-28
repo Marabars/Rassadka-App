@@ -94,6 +94,7 @@ def generate_seating(
 
         occupied: set[str] = set()
         seat_to_employee: dict[str, str] = {}
+        all_explicit_seats: set[str] = {s for seats in _explicit.values() for s in seats}
 
         # Warn about new employees (once, before phase assignment)
         for choice in ordered:
@@ -153,12 +154,17 @@ def generate_seating(
                         assigned = seat
                         break
 
-            # Fallback: Pass A — unclaimed seats; Pass B — any free seat as last resort
+            # Fallback: Pass A — unclaimed; Pass B — not explicitly preferred; Pass C — any free
             if assigned is None and fallback_to_any:
                 for seat in all_available_seats:
                     if seat not in occupied and seat not in all_claimed_seats:
                         assigned = seat
                         break
+                if assigned is None:
+                    for seat in all_available_seats:
+                        if seat not in occupied and seat not in all_explicit_seats:
+                            assigned = seat
+                            break
                 if assigned is None:
                     for seat in all_available_seats:
                         if seat not in occupied:
