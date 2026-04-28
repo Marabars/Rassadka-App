@@ -20,7 +20,7 @@ def generate_seating(
     preserve_previous: bool = True,
     fallback_to_any: bool = True,
     template_employees: set[str] | None = None,
-    explicit_preferred_seats: dict[str, str] | None = None,
+    explicit_preferred_seats: dict[str, list[str]] | None = None,
 ) -> GenerationResult:
     """Core seat assignment algorithm.
 
@@ -100,11 +100,12 @@ def generate_seating(
 
             assigned: Optional[str] = None
 
-            # Step 1: explicit preferred seat from "Preferred Seats" column
+            # Step 1: explicit preferred seats from "Preferred Seats" column (may be multiple)
             if assigned is None and _explicit:
-                explicit_seat = _explicit.get(choice.employee_name)
-                if explicit_seat and explicit_seat not in occupied:
-                    assigned = explicit_seat
+                for seat in _explicit.get(choice.employee_name, []):
+                    if seat not in occupied:
+                        assigned = seat
+                        break
 
             # Step 2: historical preferred seats (most frequent first)
             if assigned is None and preserve_previous:

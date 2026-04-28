@@ -28,7 +28,7 @@ class TemplateData:
     reserve_end_row: int = 0
     employee_order: list[str] = field(default_factory=list)
     reserve_max_rows: int = 0
-    explicit_preferred_seats: dict[str, str] = field(default_factory=dict)
+    explicit_preferred_seats: dict[str, list[str]] = field(default_factory=dict)
 
 
 def read_template(path: Path, sheet_name: str) -> TemplateData:
@@ -59,7 +59,7 @@ def read_template(path: Path, sheet_name: str) -> TemplateData:
     # Single pass: classify each row below the header as employee, reserve, or skip.
     # Empty rows in the middle are skipped (real files often have blank separator rows).
     historical: dict[str, dict[datetime.date, str]] = {}
-    explicit_preferred: dict[str, str] = {}
+    explicit_preferred: dict[str, list[str]] = {}
     employee_order: list[str] = []
     last_employee_row = first_employee_row - 1
     reserve_start_row = 0
@@ -82,9 +82,14 @@ def read_template(path: Path, sheet_name: str) -> TemplateData:
         last_employee_row = row_idx
 
         if preferred_seat_col is not None:
-            pref = normalize_seat_id(ws.cell(row=row_idx, column=preferred_seat_col).value)
-            if pref is not None:
-                explicit_preferred[employee_name] = pref
+            raw_pref = ws.cell(row=row_idx, column=preferred_seat_col).value
+            if raw_pref is not None:
+                seats = [
+                    s for part in str(raw_pref).split(";")
+                    if (s := normalize_seat_id(part.strip())) is not None
+                ]
+                if seats:
+                    explicit_preferred[employee_name] = seats
 
         for date, col_idx in date_cols.items():
             raw_seat = ws.cell(row=row_idx, column=col_idx).value
