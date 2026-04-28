@@ -24,19 +24,21 @@ def generate_seating(
 ) -> GenerationResult:
     """Core seat assignment algorithm.
 
-    For each date the processing order is:
-      1. Template employees WITH an explicit preferred seat (column "Preferred Seats")
-         — they get the highest priority so their seat is never taken first.
-      2. Template employees WITHOUT an explicit preferred, ordered by seat consistency
-         (fewest historical seats first → most stable → processed next).
-      3. Template employees with no history at all.
-      4. New employees (not in the template).
+    Phase 1 — round-robin on explicit preferred seats (column "Preferred Seats"):
+      Preference slot 0 is tried for every employee before slot 1, slot 1 before
+      slot 2, etc.  Historical data is excluded from Phase 1 so that no employee's
+      historical claim can block another employee's explicit preferred seat.
 
-    Within each group, employees are sorted alphabetically for determinism.
-    Assignment attempt order per employee:
-      a. Explicit preferred seat (if set and free).
-      b. Historical preferred seats (by frequency, most frequent first).
-      c. Any remaining free seat (fallback).
+    Phase 2 — historical + fallback for all employees not assigned in Phase 1:
+      Processing order within Phase 2 follows the original template priority:
+        a. Explicit-preference employees who exhausted all their slots.
+        b. Template employees ordered by historical seat count ascending
+           (fewest seats = most stable = processed first).
+        c. Template employees with no history.
+        d. New employees (not in the template).
+      Within each group employees are sorted alphabetically for determinism.
+      For each employee: try historical seats (most frequent first), then
+      fallback to unclaimed seats (Pass A) or any free seat (Pass B).
     """
     result = GenerationResult()
     issues: list[ValidationIssue] = []
@@ -103,54 +105,60 @@ def generate_seating(
                 issues.append(employee_not_in_template(choice.employee_name))
                 warned_new.add(choice.employee_name)
 
-        # Phase 1: assign preferred seats only (explicit → historical), no fallback.
-        # Employees whose preferred seats are all occupied are deferred to Phase 2.
-        # This guarantees no fallback employee can take a preferred seat before its
-        # owner has had a chance to claim it.
-        phase2_queue: list[EmployeeDayChoice] = []
         deferred: dict[str, Optional[str]] = {}
+        assigned_in_phase1: set[str] = set()
 
-        for choice in ordered:
-            if choice.status != EmployeeStatus.OFFICE:
-                continue
-
-            assigned: Optional[str] = None
-
-            # Step 1: explicit preferred seats from "Preferred Seats" column
-            if _explicit:
-                for seat in _explicit.get(choice.employee_name, []):
+        # Phase 1: round-robin across explicit preferred seat slots.
+        # Slot 0 → try every eligible employee's 1st explicit preference.
+        # Slot 1 → try every still-unassigned employee's 2nd explicit preference.
+        # Etc.  Historical seats are intentionally excluded: allowing a historical-seat
+        # fallback here would let one employee block another's explicit preference before
+        # that employee is even processed.
+        if _explicit:
+            explicit_office = [
+                c for c in ordered
+                if c.status == EmployeeStatus.OFFICE and c.employee_name in _explicit
+            ]
+            max_slots = max((len(v) for v in _explicit.values()), default=0)
+            for slot in range(max_slots):
+                for choice in explicit_office:
+                    if choice.employee_name in assigned_in_phase1:
+                        continue
+                    slots = _explicit.get(choice.employee_name, [])
+                    if slot >= len(slots):
+                        continue
+                    seat = slots[slot]
                     if seat not in occupied:
-                        assigned = seat
-                        break
+                        occupied.add(seat)
+                        if seat in seat_to_employee:
+                            issues.append(seat_conflict(seat, date, [seat_to_employee[seat], choice.employee_name]))
+                        seat_to_employee[seat] = choice.employee_name
+                        deferred[choice.employee_name] = seat
+                        assigned_in_phase1.add(choice.employee_name)
 
-            # Step 2: historical preferred seats (most frequent first)
-            if assigned is None and preserve_previous:
+        # Phase 2: historical seats + fallback for all OFFICE employees not yet assigned.
+        # Priority order from `ordered` is preserved (explicit-failed employees → historical-
+        # stable → historical-variable → new employees).
+        phase2_queue = [
+            c for c in ordered
+            if c.status == EmployeeStatus.OFFICE and c.employee_name not in assigned_in_phase1
+        ]
+        for choice in phase2_queue:
+            assigned = None
+
+            # Try historical preferred seats (most frequent first)
+            if preserve_previous:
                 for seat in preferred_seats.get(choice.employee_name, []):
                     if seat not in occupied:
                         assigned = seat
                         break
 
-            if assigned is not None:
-                occupied.add(assigned)
-                if assigned in seat_to_employee:
-                    issues.append(seat_conflict(assigned, date, [seat_to_employee[assigned], choice.employee_name]))
-                seat_to_employee[assigned] = choice.employee_name
-                deferred[choice.employee_name] = assigned
-            else:
-                phase2_queue.append(choice)
-
-        # Phase 2: fallback for employees with no preferred-seat match.
-        # Two passes so unclaimed seats are exhausted before touching anyone's preference list.
-        for choice in phase2_queue:
-            assigned = None
-
-            if fallback_to_any:
-                # Pass A: unclaimed seats (not in anyone's preference list)
+            # Fallback: Pass A — unclaimed seats; Pass B — any free seat as last resort
+            if assigned is None and fallback_to_any:
                 for seat in all_available_seats:
                     if seat not in occupied and seat not in all_claimed_seats:
                         assigned = seat
                         break
-                # Pass B: any free seat as last resort
                 if assigned is None:
                     for seat in all_available_seats:
                         if seat not in occupied:
