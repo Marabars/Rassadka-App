@@ -1,0 +1,27 @@
+Fix preferred seats parsing and assignment priority.
+
+Business requirement:
+In the template seating Excel file, column A contains explicit preferred seats for each employee, and column B contains employee names. Example:
+A2 = "16,25", B2 = "Марат"
+A3 = "16,25; 624", B3 = "Илья"
+
+This means:
+- Марат explicitly prefers seat 16.25.
+- Илья explicitly prefers seats 16.25 first, then 624.
+- If Илья's first preferred seat is occupied, the algorithm must try his second preferred seat before assigning 624 to any employee without explicit preferences.
+
+Current bug:
+Employees without explicit preferred seats can receive seats that are listed as another employee's second explicit preferred seat.
+
+Required changes:
+1. In app/readers/template_reader.py, detect explicit preferred seats not only by header "preferred seats", but also by the column immediately before the ФИО column.
+2. Parse semicolon-separated values from that column.
+3. Normalize each seat using normalize_seat_id().
+4. Populate TemplateData.explicit_preferred_seats.
+5. Ensure app/engine/seating_generator.py treats all explicit preferred seats as claimed seats and does not assign them to fallback employees while other non-claimed seats are available.
+6. Preserve template row order for explicit preferred employees instead of sorting them alphabetically, so conflicts are resolved predictably according to the Excel template order.
+7. Add tests:
+   - "16,25; 624" is parsed into ["16.25", "624"].
+   - If employee A gets 16.25 and employee B has "16.25; 624", employee B gets 624.
+   - Employee C without preferences does not get 624 while other seats are free.
+   - No duplicate seat assignment occurs for the same date.
