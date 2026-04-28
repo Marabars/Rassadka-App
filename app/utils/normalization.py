@@ -5,12 +5,25 @@ from typing import Optional
 
 
 def normalize_seat_id(val) -> Optional[str]:
-    """Convert raw Excel cell value to canonical seat_id string."""
+    """Convert raw Excel cell value to canonical seat_id string.
+
+    Strings with comma decimal separators (e.g. '16,1' or '16,10') are parsed
+    as numbers and normalised to dot notation with 2 decimal places so that
+    '16,1' and '16,10' both produce '16.10' and compare equal.
+    """
     if val is None:
         return None
     if isinstance(val, str):
         stripped = val.strip()
-        return stripped if stripped else None
+        if not stripped:
+            return None
+        try:
+            as_float = float(stripped.replace(",", "."))
+            if as_float == int(as_float):
+                return str(int(as_float))
+            return f"{as_float:.2f}"
+        except ValueError:
+            return stripped  # non-numeric seat name kept as-is
     if isinstance(val, int):
         return str(val)
     if isinstance(val, float):
@@ -21,12 +34,17 @@ def normalize_seat_id(val) -> Optional[str]:
 
 
 def seat_to_excel_value(seat_id: str):
-    """Convert canonical seat_id string back to a numeric value for Excel writing."""
+    """Convert canonical seat_id to an Excel cell value.
+
+    Integer seats (e.g. '636') are written as numbers.
+    Decimal seats (e.g. '16.10') are written as strings with a comma separator
+    ('16,10') so Excel displays the exact value including any trailing zero.
+    """
     try:
         as_float = float(seat_id)
         if as_float == int(as_float):
             return int(as_float)
-        return as_float
+        return seat_id.replace(".", ",")
     except (ValueError, TypeError):
         return seat_id
 

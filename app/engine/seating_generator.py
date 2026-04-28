@@ -41,6 +41,15 @@ def generate_seating(
     result = GenerationResult()
     issues: list[ValidationIssue] = []
 
+    # Pre-compute the union of ALL seats claimed by any employee's explicit or historical
+    # preferences. The two-pass fallback uses this set to avoid giving an employee's
+    # preferred seat to someone who falls back, as long as a non-claimed seat is available.
+    all_claimed_seats: set[str] = set()
+    for seats in (explicit_preferred_seats or {}).values():
+        all_claimed_seats.update(seats)
+    for seats in preferred_seats.values():
+        all_claimed_seats.update(seats)
+
     # Group choices by date, preserving stable employee order within each date
     dates_employees: dict[datetime.date, list[EmployeeDayChoice]] = {}
     for choice in choices:
@@ -114,12 +123,19 @@ def generate_seating(
                         assigned = seat
                         break
 
-            # Step 3: any remaining free seat
+            # Step 3: any remaining free seat — two-pass to protect others' preferred seats.
+            # Pass A: unclaimed seats (not in anyone's preferred list).
+            # Pass B: claimed seats (last resort, when no neutral seat exists).
             if assigned is None and fallback_to_any:
                 for seat in all_available_seats:
-                    if seat not in occupied:
+                    if seat not in occupied and seat not in all_claimed_seats:
                         assigned = seat
                         break
+                if assigned is None:
+                    for seat in all_available_seats:
+                        if seat not in occupied:
+                            assigned = seat
+                            break
 
             if assigned is None:
                 issues.append(no_free_seat(choice.employee_name, date))
