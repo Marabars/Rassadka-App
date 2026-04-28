@@ -13,6 +13,7 @@ _NAME_COL = 2
 _NAME_HEADER = "ФИО"
 _FIRST_DATA_COL = 3
 _RESERVE_LABEL = "резерв мест"
+_PREFERRED_SEAT_HEADER = "preferred seats"
 
 
 @dataclass
@@ -27,6 +28,7 @@ class TemplateData:
     reserve_end_row: int = 0
     employee_order: list[str] = field(default_factory=list)
     reserve_max_rows: int = 0
+    explicit_preferred_seats: dict[str, str] = field(default_factory=dict)
 
 
 def read_template(path: Path, sheet_name: str) -> TemplateData:
@@ -45,9 +47,19 @@ def read_template(path: Path, sheet_name: str) -> TemplateData:
     date_cols = collect_date_columns(ws, header_row, _FIRST_DATA_COL)
     first_employee_row = header_row + 1
 
+    # Find optional "Preferred Seats" column by scanning the header row
+    # (columns before the date data area, case-insensitive).
+    preferred_seat_col: int | None = None
+    for col in range(1, _FIRST_DATA_COL):
+        val = ws.cell(row=header_row, column=col).value
+        if val and str(val).strip().lower() == _PREFERRED_SEAT_HEADER:
+            preferred_seat_col = col
+            break
+
     # Single pass: classify each row below the header as employee, reserve, or skip.
     # Empty rows in the middle are skipped (real files often have blank separator rows).
     historical: dict[str, dict[datetime.date, str]] = {}
+    explicit_preferred: dict[str, str] = {}
     employee_order: list[str] = []
     last_employee_row = first_employee_row - 1
     reserve_start_row = 0
@@ -68,6 +80,11 @@ def read_template(path: Path, sheet_name: str) -> TemplateData:
         employee_name = normalize_employee_name(str(raw))
         employee_order.append(employee_name)
         last_employee_row = row_idx
+
+        if preferred_seat_col is not None:
+            pref = normalize_seat_id(ws.cell(row=row_idx, column=preferred_seat_col).value)
+            if pref is not None:
+                explicit_preferred[employee_name] = pref
 
         for date, col_idx in date_cols.items():
             raw_seat = ws.cell(row=row_idx, column=col_idx).value
@@ -102,6 +119,7 @@ def read_template(path: Path, sheet_name: str) -> TemplateData:
         reserve_end_row=reserve_end_row,
         employee_order=employee_order,
         reserve_max_rows=reserve_max_rows,
+        explicit_preferred_seats=explicit_preferred,
     )
 
 

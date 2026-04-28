@@ -20,15 +20,23 @@ def generate_seating(
     preserve_previous: bool = True,
     fallback_to_any: bool = True,
     template_employees: set[str] | None = None,
+    explicit_preferred_seats: dict[str, str] | None = None,
 ) -> GenerationResult:
     """Core seat assignment algorithm.
 
-    For each date:
-      1. Identify OFFICE employees.
-      2. Template employees are processed first so they can claim preferred seats
-         before new employees are assigned any remaining free seats.
-      3. Assign preferred seat if free, else first free seat, else log ERROR.
-      4. Non-OFFICE employees get seat_id=None.
+    For each date the processing order is:
+      1. Template employees WITH an explicit preferred seat (column "Preferred Seats")
+         — they get the highest priority so their seat is never taken first.
+      2. Template employees WITHOUT an explicit preferred, ordered by seat consistency
+         (fewest historical seats first → most stable → processed next).
+      3. Template employees with no history at all.
+      4. New employees (not in the template).
+
+    Within each group, employees are sorted alphabetically for determinism.
+    Assignment attempt order per employee:
+      a. Explicit preferred seat (if set and free).
+      b. Historical preferred seats (by frequency, most frequent first).
+      c. Any remaining free seat (fallback).
     """
     result = GenerationResult()
     issues: list[ValidationIssue] = []
@@ -45,15 +53,18 @@ def generate_seating(
     for date in sorted(dates_employees.keys()):
         day_choices = dates_employees[date]
 
-        # Priority ordering per date:
-        #   1. Template employees sorted by seat consistency (fewest preferred seats = most
-        #      stable = processed first so they always claim their habitual seat).
-        #      Employees with no history (0 seats) go last within the template group.
-        #   2. New employees (not in template) — get whatever remains.
+        # Priority ordering per date — four groups processed in sequence:
+        #   Group 0: template employees WITH explicit preferred seat
+        #   Group 1+: template employees WITHOUT explicit preferred, sorted by historical
+        #             seat count ascending (1 seat = most stable → first)
+        #   Group ∞: template employees with no explicit preferred AND no history
+        #   Group new: employees not in the template at all
+        _explicit = explicit_preferred_seats or {}
+
         def _template_sort_key(c: EmployeeDayChoice):
+            if c.employee_name in _explicit:
+                return (0, c.employee_name)
             count = len(preferred_seats.get(c.employee_name, []))
-            # 0 → treated as infinity so history-less template employees go after
-            # those with any preference data, but still before new employees.
             return (count if count > 0 else float("inf"), c.employee_name)
 
         if template_employees:
@@ -89,12 +100,20 @@ def generate_seating(
 
             assigned: Optional[str] = None
 
-            if preserve_previous:
+            # Step 1: explicit preferred seat from "Preferred Seats" column
+            if assigned is None and _explicit:
+                explicit_seat = _explicit.get(choice.employee_name)
+                if explicit_seat and explicit_seat not in occupied:
+                    assigned = explicit_seat
+
+            # Step 2: historical preferred seats (most frequent first)
+            if assigned is None and preserve_previous:
                 for seat in preferred_seats.get(choice.employee_name, []):
                     if seat not in occupied:
                         assigned = seat
                         break
 
+            # Step 3: any remaining free seat
             if assigned is None and fallback_to_any:
                 for seat in all_available_seats:
                     if seat not in occupied:

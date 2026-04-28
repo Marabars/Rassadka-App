@@ -68,6 +68,7 @@ def run(
         preserve_previous=algo.get("preserve_previous_seat", True),
         fallback_to_any=algo.get("fallback_to_any_free_seat", True),
         template_employees=set(template_data.employee_order),
+        explicit_preferred_seats=template_data.explicit_preferred_seats or None,
     )
     result.issues = choice_issues + result.issues
 
