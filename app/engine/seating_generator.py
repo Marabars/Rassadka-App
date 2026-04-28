@@ -19,13 +19,16 @@ def generate_seating(
     all_available_seats: list[str],
     preserve_previous: bool = True,
     fallback_to_any: bool = True,
+    template_employees: set[str] | None = None,
 ) -> GenerationResult:
     """Core seat assignment algorithm.
 
     For each date:
       1. Identify OFFICE employees.
-      2. Assign preferred seat if free, else first free seat, else log ERROR.
-      3. Non-OFFICE employees get seat_id=None.
+      2. Template employees are processed first so they can claim preferred seats
+         before new employees are assigned any remaining free seats.
+      3. Assign preferred seat if free, else first free seat, else log ERROR.
+      4. Non-OFFICE employees get seat_id=None.
     """
     result = GenerationResult()
     issues: list[ValidationIssue] = []
@@ -40,12 +43,28 @@ def generate_seating(
     warned_new: set[str] = set()
 
     for date in sorted(dates_employees.keys()):
-        # Sort by name for deterministic assignment order regardless of file row order
-        day_choices = sorted(dates_employees[date], key=lambda c: c.employee_name)
+        day_choices = dates_employees[date]
+
+        # Two-pass ordering: template employees first (preserve preferred seats),
+        # then new employees (get whatever is left).
+        if template_employees:
+            ordered = (
+                sorted(
+                    [c for c in day_choices if c.employee_name in template_employees],
+                    key=lambda c: c.employee_name,
+                )
+                + sorted(
+                    [c for c in day_choices if c.employee_name not in template_employees],
+                    key=lambda c: c.employee_name,
+                )
+            )
+        else:
+            ordered = sorted(day_choices, key=lambda c: c.employee_name)
+
         occupied: set[str] = set()
         seat_to_employee: dict[str, str] = {}
 
-        for choice in day_choices:
+        for choice in ordered:
             if choice.status != EmployeeStatus.OFFICE:
                 result.assignments.append(SeatAssignment(
                     employee_name=choice.employee_name,
