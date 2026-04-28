@@ -93,24 +93,31 @@ def generate_seating(
         occupied: set[str] = set()
         seat_to_employee: dict[str, str] = {}
 
+        # Warn about new employees (once, before phase assignment)
         for choice in ordered:
-            if choice.status != EmployeeStatus.OFFICE:
-                result.assignments.append(SeatAssignment(
-                    employee_name=choice.employee_name,
-                    date=date,
-                    seat_id=None,
-                ))
-                continue
-
-            # Warn once for new employees
-            if choice.employee_name not in known_employees and choice.employee_name not in warned_new:
+            if (
+                choice.status == EmployeeStatus.OFFICE
+                and choice.employee_name not in known_employees
+                and choice.employee_name not in warned_new
+            ):
                 issues.append(employee_not_in_template(choice.employee_name))
                 warned_new.add(choice.employee_name)
 
+        # Phase 1: assign preferred seats only (explicit → historical), no fallback.
+        # Employees whose preferred seats are all occupied are deferred to Phase 2.
+        # This guarantees no fallback employee can take a preferred seat before its
+        # owner has had a chance to claim it.
+        phase2_queue: list[EmployeeDayChoice] = []
+        deferred: dict[str, Optional[str]] = {}
+
+        for choice in ordered:
+            if choice.status != EmployeeStatus.OFFICE:
+                continue
+
             assigned: Optional[str] = None
 
-            # Step 1: explicit preferred seats from "Preferred Seats" column (may be multiple)
-            if assigned is None and _explicit:
+            # Step 1: explicit preferred seats from "Preferred Seats" column
+            if _explicit:
                 for seat in _explicit.get(choice.employee_name, []):
                     if seat not in occupied:
                         assigned = seat
@@ -123,14 +130,27 @@ def generate_seating(
                         assigned = seat
                         break
 
-            # Step 3: any remaining free seat — two-pass to protect others' preferred seats.
-            # Pass A: unclaimed seats (not in anyone's preferred list).
-            # Pass B: claimed seats (last resort, when no neutral seat exists).
-            if assigned is None and fallback_to_any:
+            if assigned is not None:
+                occupied.add(assigned)
+                if assigned in seat_to_employee:
+                    issues.append(seat_conflict(assigned, date, [seat_to_employee[assigned], choice.employee_name]))
+                seat_to_employee[assigned] = choice.employee_name
+                deferred[choice.employee_name] = assigned
+            else:
+                phase2_queue.append(choice)
+
+        # Phase 2: fallback for employees with no preferred-seat match.
+        # Two passes so unclaimed seats are exhausted before touching anyone's preference list.
+        for choice in phase2_queue:
+            assigned = None
+
+            if fallback_to_any:
+                # Pass A: unclaimed seats (not in anyone's preference list)
                 for seat in all_available_seats:
                     if seat not in occupied and seat not in all_claimed_seats:
                         assigned = seat
                         break
+                # Pass B: any free seat as last resort
                 if assigned is None:
                     for seat in all_available_seats:
                         if seat not in occupied:
@@ -141,15 +161,18 @@ def generate_seating(
                 issues.append(no_free_seat(choice.employee_name, date))
             else:
                 occupied.add(assigned)
-                # Conflict detection (should not happen, but guard)
                 if assigned in seat_to_employee:
                     issues.append(seat_conflict(assigned, date, [seat_to_employee[assigned], choice.employee_name]))
                 seat_to_employee[assigned] = choice.employee_name
+            deferred[choice.employee_name] = assigned
 
+        # Record assignments in original processing order
+        for choice in ordered:
+            seat_id = None if choice.status != EmployeeStatus.OFFICE else deferred.get(choice.employee_name)
             result.assignments.append(SeatAssignment(
                 employee_name=choice.employee_name,
                 date=date,
-                seat_id=assigned,
+                seat_id=seat_id,
             ))
 
         # Reserve = all available seats minus occupied
