@@ -75,3 +75,27 @@ def test_multiple_dates_independent():
     # Both can get "101" since they are on different days
     assert by_date[(d1, "Alice")] == "101"
     assert by_date[(d2, "Bob")] == "101"
+
+
+def test_explicit_preferred_seats_use_template_order_and_block_fallback():
+    choices = [_office("Zulu"), _office("Alpha"), _office("Carol")]
+    explicit = {
+        "Zulu": ["16.25"],
+        "Alpha": ["16.25", "624"],
+    }
+    result = generate_seating(
+        choices,
+        preferred_seats={},
+        all_available_seats=["16.25", "624", "101"],
+        template_employees={"Zulu", "Alpha", "Carol"},
+        explicit_preferred_seats=explicit,
+        template_employee_order=["Zulu", "Alpha", "Carol"],
+    )
+
+    assignments = {a.employee_name: a.seat_id for a in result.assignments}
+    seats = [a.seat_id for a in result.assignments if a.date == DATE and a.seat_id]
+
+    assert assignments["Zulu"] == "16.25"
+    assert assignments["Alpha"] == "624"
+    assert assignments["Carol"] == "101"
+    assert len(seats) == len(set(seats))

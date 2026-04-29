@@ -21,6 +21,7 @@ def generate_seating(
     fallback_to_any: bool = True,
     template_employees: set[str] | None = None,
     explicit_preferred_seats: dict[str, list[str]] | None = None,
+    template_employee_order: list[str] | None = None,
 ) -> GenerationResult:
     """Core seat assignment algorithm.
 
@@ -36,7 +37,8 @@ def generate_seating(
            (fewest seats = most stable = processed first).
         c. Template employees with no history.
         d. New employees (not in the template).
-      Within each group employees are sorted alphabetically for determinism.
+      Explicit-preference employees keep the template row order so conflicts
+      are resolved the same way users ordered the Excel template.
       For each employee: try historical seats (most frequent first), then
       fallback to unclaimed seats (Pass A) or any free seat (Pass B).
     """
@@ -60,6 +62,20 @@ def generate_seating(
     # Warn about new employees once
     known_employees = set(preferred_seats.keys())
     warned_new: set[str] = set()
+    template_order_index = {
+        employee: index
+        for index, employee in enumerate(template_employee_order or [])
+    }
+    choice_order_index = {
+        choice.employee_name: index
+        for index, choice in enumerate(choices)
+        if choice.employee_name not in template_order_index
+    }
+
+    def _row_order(employee_name: str) -> int:
+        if employee_name in template_order_index:
+            return template_order_index[employee_name]
+        return len(template_order_index) + choice_order_index.get(employee_name, 0)
 
     for date in sorted(dates_employees.keys()):
         day_choices = dates_employees[date]
@@ -74,7 +90,7 @@ def generate_seating(
 
         def _template_sort_key(c: EmployeeDayChoice):
             if c.employee_name in _explicit:
-                return (0, c.employee_name)
+                return (0, _row_order(c.employee_name), c.employee_name)
             count = len(preferred_seats.get(c.employee_name, []))
             return (count if count > 0 else float("inf"), c.employee_name)
 
