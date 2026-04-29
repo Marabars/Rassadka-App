@@ -75,3 +75,118 @@ def test_multiple_dates_independent():
     # Both can get "101" since they are on different days
     assert by_date[(d1, "Alice")] == "101"
     assert by_date[(d2, "Bob")] == "101"
+
+
+def test_explicit_preferred_seats_use_template_order_and_block_fallback():
+    choices = [_office("Zulu"), _office("Alpha"), _office("Carol")]
+    explicit = {
+        "Zulu": ["16.25"],
+        "Alpha": ["16.25", "624"],
+    }
+    result = generate_seating(
+        choices,
+        preferred_seats={},
+        all_available_seats=["16.25", "624", "101"],
+        template_employees={"Zulu", "Alpha", "Carol"},
+        explicit_preferred_seats=explicit,
+        template_employee_order=["Zulu", "Alpha", "Carol"],
+    )
+
+    assignments = {a.employee_name: a.seat_id for a in result.assignments}
+    seats = [a.seat_id for a in result.assignments if a.date == DATE and a.seat_id]
+
+    assert assignments["Zulu"] == "16.25"
+    assert assignments["Alpha"] == "624"
+    assert assignments["Carol"] == "101"
+    assert len(seats) == len(set(seats))
+
+
+def test_single_preference_employee_beats_two_preference_employee_even_if_later_in_order():
+    choices = [_office("B"), _office("A")]
+    explicit = {
+        "B": ["636", "16.16"],
+        "A": ["636"],
+    }
+
+    result = generate_seating(
+        choices=choices,
+        preferred_seats={},
+        all_available_seats=["636", "16.16", "999"],
+        template_employees={"A", "B"},
+        explicit_preferred_seats=explicit,
+        template_employee_order=["B", "A"],
+    )
+
+    assignments = {a.employee_name: a.seat_id for a in result.assignments}
+
+    assert assignments["A"] == "636"
+    assert assignments["B"] == "16.16"
+
+
+def test_two_single_preference_employees_beat_two_preference_employee():
+    choices = [_office("C"), _office("A"), _office("B")]
+    explicit = {
+        "C": ["636", "16.16"],
+        "A": ["636"],
+        "B": ["16.16"],
+    }
+
+    result = generate_seating(
+        choices=choices,
+        preferred_seats={},
+        all_available_seats=["636", "16.16", "999"],
+        template_employees={"A", "B", "C"},
+        explicit_preferred_seats=explicit,
+        template_employee_order=["C", "A", "B"],
+    )
+
+    assignments = {a.employee_name: a.seat_id for a in result.assignments}
+
+    assert assignments["A"] == "636"
+    assert assignments["B"] == "16.16"
+    assert assignments["C"] == "999"
+
+
+def test_same_preference_count_preserves_template_order():
+    choices = [_office("A"), _office("B")]
+    explicit = {
+        "A": ["636", "16.16"],
+        "B": ["636", "777"],
+    }
+
+    result = generate_seating(
+        choices=choices,
+        preferred_seats={},
+        all_available_seats=["636", "16.16", "777"],
+        template_employees={"A", "B"},
+        explicit_preferred_seats=explicit,
+        template_employee_order=["A", "B"],
+    )
+
+    assignments = {a.employee_name: a.seat_id for a in result.assignments}
+
+    assert assignments["A"] == "636"
+    assert assignments["B"] == "777"
+
+
+def test_employee_without_preferences_does_not_take_second_explicit_preference():
+    choices = [_office("C"), _office("B"), _office("A")]
+    explicit = {
+        "A": ["636"],
+        "B": ["636", "16.16"],
+    }
+
+    result = generate_seating(
+        choices=choices,
+        preferred_seats={},
+        all_available_seats=["636", "16.16", "999"],
+        template_employees={"A", "B", "C"},
+        explicit_preferred_seats=explicit,
+        template_employee_order=["C", "B", "A"],
+    )
+
+    assignments = {a.employee_name: a.seat_id for a in result.assignments}
+
+    assert assignments["A"] == "636"
+    assert assignments["B"] == "16.16"
+    assert assignments["C"] == "999"
