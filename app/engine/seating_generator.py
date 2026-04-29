@@ -25,10 +25,12 @@ def generate_seating(
 ) -> GenerationResult:
     """Core seat assignment algorithm.
 
-    Phase 1 — round-robin on explicit preferred seats (column "Preferred Seats"):
-      Preference slot 0 is tried for every employee before slot 1, slot 1 before
-      slot 2, etc.  Historical data is excluded from Phase 1 so that no employee's
-      historical claim can block another employee's explicit preferred seat.
+    Phase 1 — constrained-first on explicit preferred seats (column
+      "Preferred Seats"): employees with fewer explicit choices are assigned
+      before more flexible employees. Within the same preference count,
+      template row order is preserved. Historical data is excluded from Phase 1
+      so that no employee's historical claim can block another employee's
+      explicit preferred seat.
 
     Phase 2 — historical + fallback for all employees not assigned in Phase 1:
       Processing order within Phase 2 follows the original template priority:
@@ -125,26 +127,25 @@ def generate_seating(
         deferred: dict[str, Optional[str]] = {}
         assigned_in_phase1: set[str] = set()
 
-        # Phase 1: round-robin across explicit preferred seat slots.
-        # Slot 0 → try every eligible employee's 1st explicit preference.
-        # Slot 1 → try every still-unassigned employee's 2nd explicit preference.
-        # Etc.  Historical seats are intentionally excluded: allowing a historical-seat
-        # fallback here would let one employee block another's explicit preference before
-        # that employee is even processed.
+        # Phase 1: constrained-first explicit preferences.
+        # Employees with fewer options claim seats before more flexible employees.
+        # Historical seats are intentionally excluded from this phase.
         if _explicit:
             explicit_office = [
                 c for c in ordered
                 if c.status == EmployeeStatus.OFFICE and c.employee_name in _explicit
             ]
-            max_slots = max((len(v) for v in _explicit.values()), default=0)
-            for slot in range(max_slots):
-                for choice in explicit_office:
-                    if choice.employee_name in assigned_in_phase1:
-                        continue
-                    slots = _explicit.get(choice.employee_name, [])
-                    if slot >= len(slots):
-                        continue
-                    seat = slots[slot]
+            explicit_office = sorted(
+                explicit_office,
+                key=lambda c: (
+                    len(_explicit.get(c.employee_name, [])),
+                    _row_order(c.employee_name),
+                    c.employee_name,
+                ),
+            )
+            for choice in explicit_office:
+                slots = _explicit.get(choice.employee_name, [])
+                for seat in slots:
                     if seat not in occupied:
                         occupied.add(seat)
                         if seat in seat_to_employee:
@@ -152,6 +153,7 @@ def generate_seating(
                         seat_to_employee[seat] = choice.employee_name
                         deferred[choice.employee_name] = seat
                         assigned_in_phase1.add(choice.employee_name)
+                        break
 
         # Phase 2: historical seats + fallback for all OFFICE employees not yet assigned.
         # Priority order from `ordered` is preserved (explicit-failed employees → historical-
