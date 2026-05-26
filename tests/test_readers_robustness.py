@@ -119,6 +119,24 @@ def test_choices_reader_stops_after_many_consecutive_blanks():
 
 # ── name_match_key / abbreviated name resolution ─────────────────────────────
 
+def test_template_reader_parses_preferred_seats_before_name_column():
+    from app.readers import template_reader
+    from app.readers.template_reader import read_template
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Template"
+    ws.cell(row=1, column=2).value = template_reader._NAME_HEADER
+    ws.cell(row=1, column=3).value = datetime.datetime(2026, 5, 4)
+    ws.cell(row=2, column=1).value = "16,25; 624"
+    ws.cell(row=2, column=2).value = "Ilya"
+
+    path = _wb_to_path(wb)
+    data = read_template(path, "Template")
+
+    assert data.explicit_preferred_seats["Ilya"] == ["16.25", "624"]
+
+
 def test_name_match_key_full_name():
     from app.utils.normalization import name_match_key
     assert name_match_key("Дононбаев Марат Болотович") == "до марат болотович"

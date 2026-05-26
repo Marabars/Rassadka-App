@@ -47,14 +47,17 @@ def read_template(path: Path, sheet_name: str) -> TemplateData:
     date_cols = collect_date_columns(ws, header_row, _FIRST_DATA_COL)
     first_employee_row = header_row + 1
 
-    # Find optional "Preferred Seats" column by scanning the header row
-    # (columns before the date data area, case-insensitive).
+    # Find optional explicit preferred seats column. Some templates name it
+    # "Preferred Seats"; in the production layout it is also the column
+    # immediately before the FIO column.
     preferred_seat_col: int | None = None
     for col in range(1, _FIRST_DATA_COL):
         val = ws.cell(row=header_row, column=col).value
         if val and str(val).strip().lower() == _PREFERRED_SEAT_HEADER:
             preferred_seat_col = col
             break
+    if preferred_seat_col is None and _NAME_COL > 1:
+        preferred_seat_col = _NAME_COL - 1
 
     # Single pass: classify each row below the header as employee, reserve, or skip.
     # Empty rows in the middle are skipped (real files often have blank separator rows).
