@@ -14,3 +14,5 @@ venv/
 !tests/fixtures/*.xlsx
 .pytest_cache/
 .mypy_cache/
+data/
+.superpowers/sdd/

@@ -1,0 +1,71 @@
+window.App = window.App || {};
+
+App.api = (function () {
+  'use strict';
+
+  var BASE = '';
+
+  async function uploadFile(endpoint, file) {
+    var fd = new FormData();
+    fd.append('file', file);
+    var r = await fetch(BASE + endpoint, { method: 'POST', body: fd });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function generate(month, choicesId, templateId) {
+    var r = await fetch(BASE + '/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month: month, choices_id: choicesId, template_id: templateId })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function getSeating(month, date) {
+    var params = 'month=' + encodeURIComponent(month);
+    if (date) params += '&date=' + encodeURIComponent(date);
+    var r = await fetch(BASE + '/api/seating?' + params);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function overrideSeat(date, seatId, employeeName) {
+    var r = await fetch(BASE + '/api/seating/' + encodeURIComponent(date) + '/' + encodeURIComponent(seatId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employee_name: employeeName || null })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function getEmployees(date) {
+    var r = await fetch(BASE + '/api/employees?date=' + encodeURIComponent(date));
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function getLayout() {
+    var r = await fetch(BASE + '/api/layout');
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function saveLayout(layout) {
+    var r = await fetch(BASE + '/api/layout', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ layout: layout })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  return {
+    uploadFile: uploadFile, generate: generate,
+    getSeating: getSeating, overrideSeat: overrideSeat,
+    getEmployees: getEmployees, getLayout: getLayout, saveLayout: saveLayout
+  };
+})();

@@ -1,0 +1,14 @@
+[Unit]
+Description=Seating Online App
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/apps/seating-online
+ExecStart=/opt/apps/seating-online/venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8002 --workers 2
+Restart=on-failure
+RestartSec=5s
+EnvironmentFile=/opt/apps/seating-online/.env
+
+[Install]
+WantedBy=multi-user.target

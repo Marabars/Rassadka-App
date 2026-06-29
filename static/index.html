@@ -1,1 +1,35 @@
-placeholder
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Рассадка офиса</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-logo">MR</div>
+    <h1 class="topbar-title">Рассадка офиса</h1>
+  </header>
+
+  <nav class="main-nav" id="main-nav">
+    <button class="nav-tab active" data-tab="upload">Загрузка файлов</button>
+    <button class="nav-tab" data-tab="seating">Рассадка</button>
+    <button class="nav-tab" data-tab="layout">Схема офиса</button>
+  </nav>
+
+  <main id="app-main" class="app-main"></main>
+
+  <script src="/static/js/constants.js"></script>
+  <script src="/static/js/utils.js"></script>
+  <script src="/static/js/state.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/calendar.js"></script>
+  <script src="/static/js/floor-plan.js"></script>
+  <script src="/static/js/drag-drop.js"></script>
+  <script src="/static/js/upload.js"></script>
+  <script src="/static/js/seating-list.js"></script>
+  <script src="/static/js/layout-editor.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
