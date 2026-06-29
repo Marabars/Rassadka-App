@@ -14,8 +14,8 @@ App.seatingView = (function () {
     container.appendChild(calRow);
 
     var legend = U.el('div', { class: 'floor-legend' });
-    [['В офисе', '#4caf50'], ['Удаленно', '#9e9e9e'],
-     ['Отпуск', '#ff9800'], ['Свободно', '#e8f5e9']].forEach(function (pair) {
+    [['В офисе', '#82D6CC'], ['Удалённо', '#3B3760'],
+     ['Отпуск', '#BD9375'], ['Свободно', '#1C1A35']].forEach(function (pair) {
       legend.appendChild(U.el('div', { class: 'legend-item' }, [
         U.el('div', { class: 'legend-dot', style: 'background:' + pair[1] }),
         U.el('span', { text: pair[0] })
@@ -82,6 +82,8 @@ App.seatingView = (function () {
       App.upload.render(container);
     } else if (tab === 'seating') {
       App.seatingView.render(container);
+    } else if (tab === 'schedule') {
+      App.schedule.render(container);
     } else if (tab === 'layout') {
       App.layoutEditor.render(container);
     }
