@@ -17,6 +17,17 @@ App.seatingList = (function () {
     if (_container) _draw();
   }
 
+  function scrollTo(employeeName) {
+    if (!_container || !employeeName) return;
+    var chips = _container.querySelectorAll('.emp-chip');
+    for (var i = 0; i < chips.length; i++) {
+      if (chips[i].getAttribute('data-employee') === employeeName) {
+        chips[i].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        break;
+      }
+    }
+  }
+
   function _draw() {
     _container.innerHTML = '';
     var day = App.state.getDay();
@@ -48,17 +59,24 @@ App.seatingList = (function () {
 
   function _chip(emp) {
     var statusLabel = { OFFICE: '🏢', REMOTE: '🏠', VACATION: '🌴', DAY_OFF: '💤' };
-    var seatBadge = emp.seat_id ? ' → ' + emp.seat_id : '';
+    var st = App.state.get();
+    var isSelected = (st.selectedEmployee === emp.name) ||
+                     (emp.seat_id && st.selectedSeat === emp.seat_id);
+
+    var children = [
+      U.el('span', { class: 'emp-status', text: statusLabel[emp.status] || '?' }),
+      U.el('span', { class: 'emp-name', text: emp.name })
+    ];
+    if (emp.seat_id) {
+      children.push(U.el('span', { class: 'emp-seat', text: emp.seat_id }));
+    }
+
     var chip = U.el('div', {
-      class: 'emp-chip',
+      class: 'emp-chip' + (isSelected ? ' emp-chip--selected' : ''),
       'data-employee': emp.name,
       'data-from-seat': emp.seat_id || '',
       draggable: emp.status === 'OFFICE' ? 'true' : 'false'
-    }, [
-      U.el('span', { class: 'emp-status', text: statusLabel[emp.status] || '?' }),
-      U.el('span', { class: 'emp-name', text: emp.name }),
-      U.el('span', { class: 'emp-seat muted', text: seatBadge })
-    ]);
+    }, children);
 
     chip.addEventListener('click', function () {
       App.state.set({ selectedEmployee: emp.name, selectedSeat: emp.seat_id });
@@ -68,5 +86,5 @@ App.seatingList = (function () {
     return chip;
   }
 
-  return { render: render, refresh: refresh };
+  return { render: render, refresh: refresh, scrollTo: scrollTo };
 })();

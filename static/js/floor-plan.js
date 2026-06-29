@@ -7,9 +7,55 @@ App.floorPlan = (function () {
   var C = App.C;
   var _opts = {};
   var _svgRoot = null;
+  var _tooltip = null;
+
+  function _initTooltip() {
+    if (_tooltip) return;
+    _tooltip = document.createElement('div');
+    _tooltip.style.cssText = [
+      'position:fixed',
+      'background:#1C1A35',
+      'border:1px solid #433E67',
+      'color:#E5E3EB',
+      'padding:8px 16px',
+      'border-radius:6px',
+      'font-size:22px',
+      'font-family:Calibri,Helvetica Neue,Helvetica,sans-serif',
+      'pointer-events:none',
+      'z-index:9999',
+      'display:none',
+      'white-space:nowrap',
+      'box-shadow:0 4px 16px rgba(0,0,0,.5)'
+    ].join(';');
+    document.body.appendChild(_tooltip);
+  }
+
+  function _showTip(text, e) {
+    if (!_tooltip) return;
+    _tooltip.textContent = text;
+    _tooltip.style.display = 'block';
+    _moveTip(e);
+  }
+
+  function _moveTip(e) {
+    if (!_tooltip || _tooltip.style.display === 'none') return;
+    var x = e.clientX + 16;
+    var y = e.clientY + 16;
+    var tw = _tooltip.offsetWidth;
+    var th = _tooltip.offsetHeight;
+    if (x + tw > window.innerWidth - 8) x = e.clientX - tw - 8;
+    if (y + th > window.innerHeight - 8) y = e.clientY - th - 8;
+    _tooltip.style.left = x + 'px';
+    _tooltip.style.top  = y + 'px';
+  }
+
+  function _hideTip() {
+    if (_tooltip) _tooltip.style.display = 'none';
+  }
 
   function render(container, opts) {
     _opts = opts || {};
+    _initTooltip();
     container.innerHTML = '';
 
     var svg = U.svgEl('svg', {
@@ -48,7 +94,7 @@ App.floorPlan = (function () {
       });
 
       var isLight = (fill === C.STATUS_COLOR.OFFICE || fill === C.STATUS_COLOR.VACATION);
-      var idFill   = isLight ? '#1A3030' : '#7E7A9A';
+      var idFill   = isLight ? '#1A3030' : '#9994BB';
       var nameFill = isLight ? '#0E2424' : '#E5E3EB';
 
       var rect = U.svgEl('rect', {
@@ -61,8 +107,8 @@ App.floorPlan = (function () {
       g.appendChild(rect);
 
       var idLabel = U.svgEl('text', {
-        x: desk.x + W / 2, y: desk.y + 16,
-        'text-anchor': 'middle', 'font-size': '11',
+        x: desk.x + W / 2, y: desk.y + 18,
+        'text-anchor': 'middle', 'font-size': '14',
         fill: idFill, 'font-family': 'sans-serif'
       });
       idLabel.textContent = desk.id;
@@ -70,22 +116,28 @@ App.floorPlan = (function () {
 
       if (assignment && assignment.employee_name) {
         var nameLabel = U.svgEl('text', {
-          x: desk.x + W / 2, y: desk.y + 34,
-          'text-anchor': 'middle', 'font-size': '10',
+          x: desk.x + W / 2, y: desk.y + 38,
+          'text-anchor': 'middle', 'font-size': '12',
           fill: nameFill, 'font-weight': '600', 'font-family': 'sans-serif'
         });
         nameLabel.textContent = _shorten(assignment.employee_name);
         g.appendChild(nameLabel);
       }
 
-      var title = U.svgEl('title', {});
-      title.textContent = desk.id + (assignment ? ': ' + assignment.employee_name : ': свободно');
-      g.appendChild(title);
+      var tipText = assignment && assignment.employee_name
+        ? assignment.employee_name + ' · ' + desk.id
+        : desk.id + ' · свободно';
 
       g.style.cursor = 'pointer';
+
+      g.addEventListener('mouseenter', function (e) { _showTip(tipText, e); });
+      g.addEventListener('mousemove',  function (e) { _moveTip(e); });
+      g.addEventListener('mouseleave', _hideTip);
+
       g.addEventListener('click', function () {
-        App.state.set({ selectedSeat: desk.id });
-        if (_opts.onSeatClick) _opts.onSeatClick(desk.id);
+        _hideTip();
+        App.state.set({ selectedSeat: desk.id, selectedEmployee: assignment ? assignment.employee_name : null });
+        if (_opts.onSeatClick) _opts.onSeatClick(desk.id, assignment ? assignment.employee_name : null);
         refresh();
       });
 
@@ -95,7 +147,7 @@ App.floorPlan = (function () {
 
   function _shorten(fullName) {
     var parts = fullName.split(' ');
-    if (parts.length < 2) return fullName.slice(0, 12);
+    if (parts.length < 2) return fullName.slice(0, 11);
     return parts[0] + ' ' + (parts[1] ? parts[1][0] + '.' : '');
   }
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import uuid
 import datetime
 from pathlib import Path, PurePosixPath
@@ -65,16 +66,30 @@ async def generate(body: dict):
             raise HTTPException(404, "template upload not found")
         template_path = Path(row2[0])
 
+        layout_row = await (await db.execute(
+            "SELECT layout_json FROM office_layout ORDER BY saved_at DESC LIMIT 1"
+        )).fetchone()
+
     cfg = load_config()
     template_data = read_template(template_path, cfg["input"]["template_sheet_name"])
     choices, choice_issues = read_choices(
         choices_path, cfg["input"]["choices_sheet_name"], cfg["status_mapping"]
     )
+
+    if layout_row and layout_row[0]:
+        try:
+            layout_desks = json.loads(layout_row[0])
+            available_seats = [d["id"] for d in layout_desks if d.get("id")]
+        except (json.JSONDecodeError, KeyError):
+            available_seats = template_data.all_seats
+    else:
+        available_seats = template_data.all_seats
+
     preferred = build_preferred_seats(template_data.historical_assignments)
     result = generate_seating(
         choices=choices,
         preferred_seats=preferred,
-        all_available_seats=template_data.all_seats,
+        all_available_seats=available_seats,
         preserve_previous=cfg["algorithm"]["preserve_previous_seat"],
         fallback_to_any=cfg["algorithm"]["fallback_to_any_free_seat"],
         template_employees=set(template_data.employee_order),

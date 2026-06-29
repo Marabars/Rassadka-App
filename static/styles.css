@@ -1,5 +1,6 @@
 /* =========================================================
    MR Group · Рассадка офиса — Corporate Dark Theme
+   Base font: 30px
    ========================================================= */
 
 /* --- Tokens ------------------------------------------------ */
@@ -12,46 +13,52 @@
 
   --accent:     #7549E8;
   --accent-2:   #8A62F0;
-  --accent-dim: rgba(117, 73, 232, .14);
+  --accent-dim: rgba(117, 73, 232, .16);
 
   --teal:       #82D6CC;
   --warm:       #BD9375;
 
   --text:       #E5E3EB;
-  --text-muted: #7E7A9A;
+  --text-muted: #9994BB;
   --text-faint: #4A4668;
 
-  --status-office:   #82D6CC;
-  --status-remote:   #3B3760;
-  --status-vacation: #BD9375;
-  --status-dayoff:   #1F1D34;
-  --status-free:     #1C1A35;
+  --fs-body:  30px;
+  --fs-sm:    24px;
+  --fs-xs:    20px;
+  --fs-label: 18px;
+  --fs-mono:  26px;
+  --fs-h2:    34px;
+  --fs-h3:    30px;
 
-  --radius-sm: 4px;
-  --radius:    8px;
-  --radius-lg: 12px;
+  --radius-sm: 5px;
+  --radius:    10px;
+  --radius-lg: 14px;
 }
 
 /* --- Reset ------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* --- Base -------------------------------------------------- */
-html { font-size: 14px; }
+html { font-size: var(--fs-body); }
 body {
   font-family: 'Calibri', 'Helvetica Neue', Helvetica, -apple-system, sans-serif;
+  font-size: var(--fs-body);
   color: var(--text);
   background: var(--bg-deep);
-  line-height: 1.5;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
+
+h2 { font-size: var(--fs-h2); font-weight: 600; }
+h3 { font-size: var(--fs-h3); font-weight: 600; }
 
 /* --- Topbar ------------------------------------------------ */
 .topbar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 56px;
-  padding: 0 24px;
+  gap: 16px;
+  height: 72px;
+  padding: 0 28px;
   background: #070512;
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -62,18 +69,18 @@ body {
 .topbar-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
 .logo-mark {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
 }
 
 .logo-wordmark {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: .03em;
   color: var(--text);
@@ -82,12 +89,12 @@ body {
 
 .topbar-divider {
   width: 1px;
-  height: 22px;
+  height: 26px;
   background: var(--border);
 }
 
 .topbar-title {
-  font-size: 14px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--text-muted);
   letter-spacing: .01em;
@@ -98,21 +105,20 @@ body {
   display: flex;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  gap: 0;
+  padding: 0 28px;
 }
 
 .nav-tab {
-  padding: 0 20px;
-  height: 44px;
+  padding: 0 24px;
+  height: 60px;
   border: none;
   background: none;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--text-muted);
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   margin-bottom: -1px;
   letter-spacing: .01em;
   transition: color 120ms, border-color 120ms;
@@ -124,14 +130,14 @@ body {
 }
 
 /* --- Main -------------------------------------------------- */
-.app-main { padding: 24px; }
+.app-main { padding: 28px; }
 
 /* --- Utility ----------------------------------------------- */
-.muted { color: var(--text-muted); font-size: 13px; }
+.muted { color: var(--text-muted); font-size: var(--fs-sm); }
 .section-label {
-  font-size: 11px;
+  font-size: var(--fs-label);
   font-weight: 600;
-  letter-spacing: .08em;
+  letter-spacing: .07em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -141,20 +147,20 @@ body {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 24px;
 }
 
 /* --- Buttons ----------------------------------------------- */
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
+  gap: 8px;
+  padding: 12px 26px;
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   font-weight: 500;
   transition: background 120ms, box-shadow 120ms;
   white-space: nowrap;
@@ -165,7 +171,7 @@ body {
 }
 .btn-primary:hover {
   background: var(--accent-2);
-  box-shadow: 0 0 0 3px var(--accent-dim);
+  box-shadow: 0 0 0 4px var(--accent-dim);
 }
 .btn-secondary {
   background: var(--bg-raised);
@@ -176,28 +182,29 @@ body {
   background: var(--border);
   border-color: var(--border-hi);
 }
+.btn:disabled { opacity: .45; cursor: default; pointer-events: none; }
 
 /* --- Badges ------------------------------------------------ */
 .badge-error {
   background: rgba(198, 40, 40, .15);
   color: #F48A8A;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: var(--fs-sm);
 }
 .badge-warning {
   background: rgba(189, 147, 117, .15);
   color: var(--warm);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: var(--fs-sm);
 }
 .badge-info {
   background: rgba(130, 214, 204, .15);
   color: var(--teal);
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: var(--fs-sm);
 }
 
 /* --- Form elements ----------------------------------------- */
@@ -208,9 +215,9 @@ input[type="text"] {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
-  padding: 7px 10px;
+  padding: 10px 14px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-body);
   outline: none;
   transition: border-color 120ms, box-shadow 120ms;
 }
@@ -222,16 +229,18 @@ input[type="text"]:focus {
 }
 input[type="month"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
+  width: 22px;
+  height: 22px;
 }
 
 /* --- Upload tab -------------------------------------------- */
-.upload-card { max-width: 540px; }
-.form-row { display: flex; flex-direction: column; gap: 6px; }
-.form-row label { font-weight: 500; font-size: 13px; }
+.upload-card { max-width: 580px; }
+.form-row { display: flex; flex-direction: column; gap: 8px; }
+.form-row label { font-weight: 600; font-size: var(--fs-body); }
 .upload-status {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   border: 1px solid var(--border);
   background: var(--bg-raised);
 }
@@ -239,45 +248,45 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 /* --- Calendar --------------------------------------------- */
 .calendar-wrap {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .cal-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
-  min-width: 252px;
+  padding: 20px;
+  min-width: 320px;
 }
 .cal-title {
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: var(--fs-body);
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   letter-spacing: .02em;
   color: var(--text);
 }
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 3px;
 }
 .cal-header {
   text-align: center;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .06em;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--text-faint);
-  padding: 4px 0;
+  padding: 5px 0;
 }
 .cal-cell {
   text-align: center;
-  padding: 6px 2px;
+  padding: 8px 3px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   transition: background 100ms;
 }
@@ -288,12 +297,12 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 .cal-cell.today {
   background: var(--bg-raised);
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
 }
 .cal-cell.selected {
   background: var(--accent);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* --- Floor plan -------------------------------------------- */
@@ -302,27 +311,28 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   background: #0E0C1E;
   border: 1px solid var(--border);
   display: block;
+  max-width: 100%;
 }
 .desk-group.selected rect {
-  filter: drop-shadow(0 0 5px rgba(117, 73, 232, .7));
+  filter: drop-shadow(0 0 6px rgba(117, 73, 232, .8));
 }
 .floor-legend {
   display: flex;
-  gap: 18px;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  font-size: var(--fs-sm);
 }
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
+  gap: 8px;
   color: var(--text-muted);
 }
 .legend-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
   flex-shrink: 0;
 }
 
@@ -332,42 +342,44 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 [data-employee].dragging { opacity: .45; }
 .desk-group.drag-over rect {
   stroke: var(--accent);
-  stroke-width: 2.5;
-  filter: drop-shadow(0 0 6px rgba(117, 73, 232, .5));
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(117, 73, 232, .6));
 }
 
 /* --- Seating view ------------------------------------------ */
-.seating-top-row { margin-bottom: 20px; }
+.seating-top-row { margin-bottom: 24px; }
 .seating-main-area {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   align-items: flex-start;
   flex-wrap: wrap;
 }
 .floor-plan-container { flex-shrink: 0; }
 .emp-list-container {
   flex: 1;
-  min-width: 240px;
-  max-height: 870px;
+  min-width: 280px;
+  max-height: 920px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
-.emp-list-body { display: flex; flex-direction: column; gap: 3px; }
+.emp-list-body { display: flex; flex-direction: column; gap: 4px; }
 .list-section-title {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .08em;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: .07em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin: 12px 0 5px;
+  margin: 14px 0 6px;
   padding-left: 2px;
 }
+
+/* Employee chip — seat chip RIGHT next to name */
 .emp-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
+  gap: 10px;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
   border: 1px solid transparent;
@@ -378,42 +390,47 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   background: var(--bg-raised);
   border-color: var(--border-hi);
 }
+.emp-chip--selected {
+  border-color: var(--accent) !important;
+  background: var(--accent-dim) !important;
+}
 .emp-chip[draggable="true"] { cursor: grab; }
 .emp-chip[draggable="true"]:hover { border-color: var(--accent); }
-.emp-status { font-size: 14px; }
-.emp-name { flex: 1; font-size: 12px; color: var(--text); }
+.emp-status { font-size: 22px; flex-shrink: 0; }
+.emp-name { font-size: var(--fs-body); color: var(--text); white-space: nowrap; }
 .emp-seat {
-  font-size: 11px;
-  font-family: 'SF Mono', 'Consolas', 'Courier New', monospace;
+  font-size: var(--fs-sm);
+  font-family: 'Consolas', 'Courier New', monospace;
   color: var(--teal);
   background: rgba(130, 214, 204, .1);
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 /* --- Layout editor ----------------------------------------- */
 .editor-header {
   display: flex;
   align-items: baseline;
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: 18px;
+  margin-bottom: 16px;
 }
 .editor-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .add-desk-form {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 }
 .editor-hint {
-  margin-bottom: 12px;
-  font-size: 12px;
+  margin-bottom: 14px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 .editor-canvas-wrap { overflow: auto; }
@@ -421,14 +438,14 @@ input[type="month"]::-webkit-calendar-picker-indicator {
 .editor-desk { cursor: move; }
 .editor-desk rect { transition: stroke 100ms; }
 .editor-desk rect:hover { stroke: var(--accent); stroke-width: 2; }
-.save-status { font-size: 12px; color: var(--text-muted); }
+.save-status { font-size: var(--fs-sm); color: var(--text-muted); }
 
 /* --- Scrollbar (webkit) ------------------------------------ */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hi); }
 

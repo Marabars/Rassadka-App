@@ -27,9 +27,10 @@ App.seatingView = (function () {
 
     var planContainer = U.el('div', { class: 'floor-plan-container' });
     App.floorPlan.render(planContainer, {
-      onSeatClick: function (seatId) {
-        App.state.set({ selectedSeat: seatId });
+      onSeatClick: function (seatId, empName) {
+        App.state.set({ selectedSeat: seatId, selectedEmployee: empName || null });
         App.seatingList.refresh();
+        if (empName) App.seatingList.scrollTo(empName);
       }
     });
     mainArea.appendChild(planContainer);
