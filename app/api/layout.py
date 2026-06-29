@@ -45,7 +45,7 @@ _DEFAULT_LAYOUT = [
 
 @router.get("/layout")
 async def get_layout():
-    async with await get_db() as db:
+    async with get_db() as db:
         row = await (await db.execute(
             "SELECT layout_json FROM office_layout WHERE id=1"
         )).fetchone()
@@ -57,7 +57,7 @@ async def get_layout():
 async def save_layout(body: dict):
     layout = body.get("layout", [])
     layout_json = json.dumps(layout, ensure_ascii=False)
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute(
             """INSERT INTO office_layout(id, layout_json) VALUES(1, ?)
                ON CONFLICT(id) DO UPDATE SET layout_json=?""",

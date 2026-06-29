@@ -32,7 +32,7 @@ async def _save_upload(file: UploadFile, kind: str) -> dict:
     content = await file.read()
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute(
             "INSERT INTO uploads(id, kind, filename, path, created_at) VALUES (?,?,?,?,?)",
             (upload_id, kind, safe_name, str(dest), now)
@@ -50,7 +50,7 @@ async def generate(body: dict):
     if not all([month, choices_id, template_id]):
         raise HTTPException(400, "month, choices_id and template_id are required")
 
-    async with await get_db() as db:
+    async with get_db() as db:
         row = await (await db.execute(
             "SELECT path FROM uploads WHERE id=? AND kind='choices'", (choices_id,)
         )).fetchone()
@@ -83,7 +83,7 @@ async def generate(body: dict):
     all_issues = choice_issues + result.issues
     adapted = adapt_result(result)
 
-    async with await get_db() as db:
+    async with get_db() as db:
         await db.execute("DELETE FROM seat_assignments WHERE month=?", (month,))
         await db.execute("DELETE FROM validation_issues WHERE month=?", (month,))
         for a in adapted["assignments"]:

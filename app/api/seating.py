@@ -6,7 +6,7 @@ router = APIRouter()
 
 @router.get("/seating")
 async def get_seating(month: str, date: str | None = None):
-    async with await get_db() as db:
+    async with get_db() as db:
         if date:
             rows = await (await db.execute(
                 "SELECT employee_name, seat_id, status, is_manual FROM seat_assignments WHERE date=?",
@@ -29,7 +29,7 @@ async def override_seat(date: str, seat_id: str, body: dict):
     employee_name = body.get("employee_name")
     month = date[:7]
 
-    async with await get_db() as db:
+    async with get_db() as db:
         if employee_name:
             # Evict whoever currently occupies the target seat
             await db.execute(

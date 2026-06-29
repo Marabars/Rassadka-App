@@ -2,8 +2,8 @@ from __future__ import annotations
 import aiosqlite
 from app.config import get_db_path
 
-async def get_db() -> aiosqlite.Connection:
-    return await aiosqlite.connect(get_db_path())
+def get_db() -> aiosqlite.Connection:
+    return aiosqlite.connect(get_db_path())
 
 async def init_db() -> None:
     async with aiosqlite.connect(get_db_path()) as db:
