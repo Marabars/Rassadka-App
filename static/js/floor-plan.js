@@ -47,11 +47,15 @@ App.floorPlan = (function () {
         'data-seat': desk.id
       });
 
+      var isLight = (fill === C.STATUS_COLOR.OFFICE || fill === C.STATUS_COLOR.VACATION);
+      var idFill   = isLight ? '#1A3030' : '#7E7A9A';
+      var nameFill = isLight ? '#0E2424' : '#E5E3EB';
+
       var rect = U.svgEl('rect', {
         x: desk.x, y: desk.y, width: W, height: H,
         rx: 4, ry: 4,
         fill: fill,
-        stroke: isSelected ? '#1a237e' : '#bdbdbd',
+        stroke: isSelected ? '#7549E8' : '#2E2A4A',
         'stroke-width': isSelected ? 2.5 : 1
       });
       g.appendChild(rect);
@@ -59,7 +63,7 @@ App.floorPlan = (function () {
       var idLabel = U.svgEl('text', {
         x: desk.x + W / 2, y: desk.y + 16,
         'text-anchor': 'middle', 'font-size': '11',
-        fill: '#616161', 'font-family': 'sans-serif'
+        fill: idFill, 'font-family': 'sans-serif'
       });
       idLabel.textContent = desk.id;
       g.appendChild(idLabel);
@@ -68,7 +72,7 @@ App.floorPlan = (function () {
         var nameLabel = U.svgEl('text', {
           x: desk.x + W / 2, y: desk.y + 34,
           'text-anchor': 'middle', 'font-size': '10',
-          fill: '#212121', 'font-weight': '600', 'font-family': 'sans-serif'
+          fill: nameFill, 'font-weight': '600', 'font-family': 'sans-serif'
         });
         nameLabel.textContent = _shorten(assignment.employee_name);
         g.appendChild(nameLabel);

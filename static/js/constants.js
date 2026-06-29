@@ -42,11 +42,11 @@ App.C = (function () {
   ];
 
   var STATUS_COLOR = {
-    OFFICE:   '#4caf50',
-    REMOTE:   '#9e9e9e',
-    VACATION: '#ff9800',
-    DAY_OFF:  '#bdbdbd',
-    FREE:     '#e8f5e9'
+    OFFICE:   '#82D6CC',
+    REMOTE:   '#3B3760',
+    VACATION: '#BD9375',
+    DAY_OFF:  '#1F1D34',
+    FREE:     '#1C1A35'
   };
 
   var DESK_W = 90;

@@ -114,14 +114,14 @@ App.layoutEditor = (function () {
 
       var rect = U.svgEl('rect', {
         x: desk.x, y: desk.y, width: DESK_W, height: DESK_H,
-        rx: 4, ry: 4, fill: '#e8f5e9', stroke: '#43a047', 'stroke-width': 1.5
+        rx: 4, ry: 4, fill: '#1C1A35', stroke: '#433E67', 'stroke-width': 1.5
       });
       g.appendChild(rect);
 
       var label = U.svgEl('text', {
         x: desk.x + DESK_W / 2, y: desk.y + DESK_H / 2 + 5,
         'text-anchor': 'middle', 'font-size': '12',
-        fill: '#212121', 'font-family': 'sans-serif', 'font-weight': '600'
+        fill: '#E5E3EB', 'font-family': 'sans-serif', 'font-weight': '600'
       });
       label.textContent = desk.id;
       g.appendChild(label);
@@ -129,7 +129,7 @@ App.layoutEditor = (function () {
       var zoneLabel = U.svgEl('text', {
         x: desk.x + DESK_W / 2, y: desk.y + DESK_H - 6,
         'text-anchor': 'middle', 'font-size': '9',
-        fill: '#757575', 'font-family': 'sans-serif'
+        fill: '#7E7A9A', 'font-family': 'sans-serif'
       });
       zoneLabel.textContent = desk.zone;
       g.appendChild(zoneLabel);
@@ -144,7 +144,6 @@ App.layoutEditor = (function () {
       g.addEventListener('dblclick', function () {
         if (!confirm('Удалить рабочее место «' + desk.id + '»?')) return;
         _layout.splice(idx, 1);
-        _dirty = true;
         _redraw();
       });
 
@@ -173,7 +172,7 @@ App.layoutEditor = (function () {
   }
 
   function _zoneSelect(id) {
-    var sel = U.el('select', { id: id, style: 'margin:0 8px; padding:6px; border:1px solid #ccc; border-radius:4px' });
+    var sel = U.el('select', { id: id, style: 'margin:0 8px; padding:6px 8px; background:#1C1A35; border:1px solid #2E2A4A; border-radius:4px; color:#E5E3EB; font-family:inherit; font-size:13px' });
     ['top', 'mid-top', 'mid', 'right', 'bottom', 'custom'].forEach(function (z) {
       sel.appendChild(U.el('option', { value: z, text: z }));
     });
