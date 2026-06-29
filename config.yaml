@@ -16,3 +16,7 @@ algorithm:
   preserve_previous_seat: true
   fallback_to_any_free_seat: true
   treat_unknown_status_as_absent: true
+
+web:
+  upload_dir: "data/uploads"
+  db_path: "data/seating.db"
