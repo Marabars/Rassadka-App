@@ -1,11 +1,16 @@
 from __future__ import annotations
-import uuid, datetime
-from pathlib import Path
+import uuid
+import datetime
+from pathlib import Path, PurePosixPath
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
 from app.config import get_upload_dir, load_config
 from app.database import get_db
 from app.writers.result_adapter import adapt_result
+from app.readers.choices_reader import read_choices
+from app.readers.template_reader import read_template
+from app.engine.preferred_seats import build_preferred_seats
+from app.engine.seating_generator import generate_seating
 
 router = APIRouter()
 
@@ -18,17 +23,23 @@ async def upload_template(file: UploadFile = File(...)):
     return await _save_upload(file, "template")
 
 async def _save_upload(file: UploadFile, kind: str) -> dict:
+    safe_name = PurePosixPath(file.filename or "upload").name
+    if not safe_name.lower().endswith(".xlsx"):
+        raise HTTPException(400, "Only .xlsx files are accepted")
+
     upload_id = str(uuid.uuid4())
-    dest = get_upload_dir() / f"{upload_id}_{file.filename}"
+    dest = get_upload_dir() / f"{upload_id}_{safe_name}"
     content = await file.read()
-    dest.write_bytes(content)
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
     async with await get_db() as db:
         await db.execute(
             "INSERT INTO uploads(id, kind, filename, path, created_at) VALUES (?,?,?,?,?)",
-            (upload_id, kind, file.filename, str(dest), datetime.datetime.utcnow().isoformat())
+            (upload_id, kind, safe_name, str(dest), now)
         )
         await db.commit()
-    return {"upload_id": upload_id, "filename": file.filename}
+    dest.write_bytes(content)
+    return {"upload_id": upload_id, "filename": safe_name}
 
 @router.post("/generate")
 async def generate(body: dict):
@@ -55,11 +66,6 @@ async def generate(body: dict):
         template_path = Path(row2[0])
 
     cfg = load_config()
-    from app.readers.choices_reader import read_choices
-    from app.readers.template_reader import read_template
-    from app.engine.preferred_seats import build_preferred_seats
-    from app.engine.seating_generator import generate_seating
-
     template_data = read_template(template_path, cfg["input"]["template_sheet_name"])
     choices, choice_issues = read_choices(
         choices_path, cfg["input"]["choices_sheet_name"], cfg["status_mapping"]
@@ -74,8 +80,7 @@ async def generate(body: dict):
         template_employees=set(template_data.employee_order),
         template_employee_order=template_data.employee_order,
     )
-    result.issues = choice_issues + result.issues
-
+    all_issues = choice_issues + result.issues
     adapted = adapt_result(result)
 
     async with await get_db() as db:
@@ -87,14 +92,16 @@ async def generate(body: dict):
                 (month, a["date"], a["employee_name"], a["seat_id"],
                  "OFFICE" if a["seat_id"] else "REMOTE")
             )
-        for i in adapted["issues"]:
+        for i in all_issues:
             await db.execute(
                 "INSERT INTO validation_issues(month,severity,issue_code,description,date,employee_name) VALUES(?,?,?,?,?,?)",
-                (month, i["severity"], i["code"], i["description"], i["date"], i["employee_name"])
+                (month, i.severity.value, i.issue_code, i.description,
+                 i.date.isoformat() if i.date else None, i.employee_name)
             )
         await db.commit()
 
-    error_count = sum(1 for i in adapted["issues"] if i["severity"] == "ERROR")
+    from app.domain.models import IssueSeverity
+    error_count = sum(1 for i in all_issues if i.severity == IssueSeverity.ERROR)
     assigned_count = sum(1 for a in adapted["assignments"] if a["seat_id"])
-    return {"ok": True, "issues_count": len(adapted["issues"]),
+    return {"ok": True, "issues_count": len(all_issues),
             "error_count": error_count, "assigned_count": assigned_count}

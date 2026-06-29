@@ -10,7 +10,6 @@ App.layoutEditor = (function () {
   var _svgRoot = null;
   var _container = null;
   var _dragging = null;
-  var _dirty = false;
 
   var DESK_W = C.DESK_W;
   var DESK_H = C.DESK_H;
@@ -23,7 +22,6 @@ App.layoutEditor = (function () {
     _layout = JSON.parse(JSON.stringify(
       App.state.get().layout || C.DEFAULT_FLOOR_LAYOUT
     ));
-    _dirty = false;
     _drawUI();
   }
 
@@ -56,7 +54,6 @@ App.layoutEditor = (function () {
       }
       _layout.push({ id: newId, x: 50, y: 50, zone: zoneInput.value });
       idInput.value = '';
-      _dirty = true;
       _redraw();
     });
     toolbar.appendChild(addForm);
@@ -68,7 +65,6 @@ App.layoutEditor = (function () {
       saveStatus.textContent = 'Сохраняю…';
       App.api.saveLayout(_layout).then(function (res) {
         App.state.set({ layout: JSON.parse(JSON.stringify(_layout)) });
-        _dirty = false;
         saveStatus.textContent = 'Сохранено (' + res.count + ' мест).';
       }).catch(function (e) {
         saveStatus.textContent = 'Ошибка: ' + e.message;
@@ -80,7 +76,6 @@ App.layoutEditor = (function () {
     resetBtn.addEventListener('click', function () {
       if (!confirm('Сбросить схему к исходному варианту из фото офиса?')) return;
       _layout = JSON.parse(JSON.stringify(C.DEFAULT_FLOOR_LAYOUT));
-      _dirty = true;
       _redraw();
     });
 
@@ -99,6 +94,9 @@ App.layoutEditor = (function () {
       class: 'floor-svg editor-svg'
     });
     _svgRoot = svg;
+    svg.addEventListener('mousemove', _onMouseMove);
+    svg.addEventListener('mouseup', _onMouseUp);
+    svg.addEventListener('mouseleave', _onMouseUp);
     _drawDesks();
     canvasWrap.appendChild(svg);
     _container.appendChild(canvasWrap);
@@ -152,10 +150,6 @@ App.layoutEditor = (function () {
 
       _svgRoot.appendChild(g);
     });
-
-    _svgRoot.addEventListener('mousemove', _onMouseMove);
-    _svgRoot.addEventListener('mouseup', _onMouseUp);
-    _svgRoot.addEventListener('mouseleave', _onMouseUp);
   }
 
   function _onMouseMove(e) {
@@ -174,7 +168,6 @@ App.layoutEditor = (function () {
 
   function _onMouseUp() {
     if (_dragging) {
-      _dirty = true;
       _dragging = null;
     }
   }

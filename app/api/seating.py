@@ -31,6 +31,12 @@ async def override_seat(date: str, seat_id: str, body: dict):
 
     async with await get_db() as db:
         if employee_name:
+            # Evict whoever currently occupies the target seat
+            await db.execute(
+                "UPDATE seat_assignments SET seat_id=NULL WHERE date=? AND seat_id=? AND employee_name!=?",
+                (date, seat_id, employee_name)
+            )
+            # Clear the moving employee's current seat
             await db.execute(
                 "UPDATE seat_assignments SET seat_id=NULL WHERE date=? AND employee_name=?",
                 (date, employee_name)
