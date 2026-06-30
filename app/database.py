@@ -41,5 +41,11 @@ async def init_db() -> None:
                 id   INTEGER PRIMARY KEY CHECK (id = 1),
                 layout_json TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS employee_preferences (
+                employee_name TEXT PRIMARY KEY,
+                preferred_seats TEXT NOT NULL DEFAULT '',
+                updated_at TEXT
+            );
         """)
         await db.commit()

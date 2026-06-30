@@ -67,8 +67,17 @@ async def generate(body: dict):
         template_path = Path(row2[0])
 
         layout_row = await (await db.execute(
-            "SELECT layout_json FROM office_layout ORDER BY saved_at DESC LIMIT 1"
+            "SELECT layout_json FROM office_layout WHERE id=1"
         )).fetchone()
+
+        pref_rows = await (await db.execute(
+            "SELECT employee_name, preferred_seats FROM employee_preferences"
+        )).fetchall()
+
+    db_preferences = {
+        r[0]: [s.strip() for s in (r[1] or "").split(",") if s.strip()]
+        for r in pref_rows
+    }
 
     cfg = load_config()
     template_data = read_template(template_path, cfg["input"]["template_sheet_name"])
@@ -86,6 +95,10 @@ async def generate(body: dict):
         available_seats = template_data.all_seats
 
     preferred = build_preferred_seats(template_data.historical_assignments)
+    for name, seats in db_preferences.items():
+        if seats:
+            preferred[name] = seats
+
     result = generate_seating(
         choices=choices,
         preferred_seats=preferred,

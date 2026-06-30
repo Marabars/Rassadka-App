@@ -63,9 +63,26 @@ App.api = (function () {
     return r.json();
   }
 
+  async function getPreferences() {
+    var r = await fetch(BASE + '/api/preferences');
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function setPreference(employeeName, seats) {
+    var r = await fetch(BASE + '/api/preferences/' + encodeURIComponent(employeeName), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seats: seats })
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
   return {
     uploadFile: uploadFile, generate: generate,
     getSeating: getSeating, overrideSeat: overrideSeat,
-    getEmployees: getEmployees, getLayout: getLayout, saveLayout: saveLayout
+    getEmployees: getEmployees, getLayout: getLayout, saveLayout: saveLayout,
+    getPreferences: getPreferences, setPreference: setPreference
   };
 })();
