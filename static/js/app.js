@@ -87,6 +87,8 @@ App.seatingView = (function () {
       App.schedule.render(container);
     } else if (tab === 'layout') {
       App.layoutEditor.render(container);
+    } else if (tab === 'logs') {
+      App.logs.init(container);
     }
   }
 
@@ -105,4 +107,13 @@ App.seatingView = (function () {
 
   App.app = { switchTab: switchTab, render: render };
   document.addEventListener('DOMContentLoaded', init);
+
+  window.addEventListener('error', function (e) {
+    App.api.postClientError(e.message, e.error && e.error.stack, e.filename + ':' + e.lineno);
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var msg = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+    var stk = e.reason && e.reason.stack ? e.reason.stack : '';
+    App.api.postClientError('Unhandled promise: ' + msg, stk, location.href);
+  });
 })();

@@ -79,10 +79,28 @@ App.api = (function () {
     return r.json();
   }
 
+  async function getLogs(lines) {
+    var n = lines || 300;
+    var r = await fetch(BASE + '/api/logs?lines=' + n);
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  async function postClientError(message, stack, url) {
+    try {
+      await fetch(BASE + '/api/log-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message, stack: stack || '', url: url || location.href })
+      });
+    } catch (_) {}
+  }
+
   return {
     uploadFile: uploadFile, generate: generate,
     getSeating: getSeating, overrideSeat: overrideSeat,
     getEmployees: getEmployees, getLayout: getLayout, saveLayout: saveLayout,
-    getPreferences: getPreferences, setPreference: setPreference
+    getPreferences: getPreferences, setPreference: setPreference,
+    getLogs: getLogs, postClientError: postClientError
   };
 })();

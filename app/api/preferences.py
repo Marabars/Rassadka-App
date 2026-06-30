@@ -1,9 +1,11 @@
 from __future__ import annotations
+import logging
 import datetime
 from fastapi import APIRouter
 from app.database import get_db
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/preferences")
@@ -32,4 +34,5 @@ async def set_preference(employee_name: str, body: dict):
             (employee_name, seats_str, now),
         )
         await db.commit()
+    logger.info("Preferences saved: employee=%s, seats=[%s]", employee_name, seats_str)
     return {"ok": True}

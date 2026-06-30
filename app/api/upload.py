@@ -5,8 +5,11 @@ import datetime
 from pathlib import Path, PurePosixPath
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
+import logging
 from app.config import get_upload_dir, load_config
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.writers.result_adapter import adapt_result
 from app.readers.choices_reader import read_choices
 from app.readers.template_reader import read_template
@@ -40,6 +43,7 @@ async def _save_upload(file: UploadFile, kind: str) -> dict:
         )
         await db.commit()
     dest.write_bytes(content)
+    logger.info("File uploaded: kind=%s, name=%s, id=%s", kind, safe_name, upload_id)
     return {"upload_id": upload_id, "filename": safe_name}
 
 @router.post("/generate")
@@ -50,6 +54,7 @@ async def generate(body: dict):
 
     if not all([month, choices_id, template_id]):
         raise HTTPException(400, "month, choices_id and template_id are required")
+    logger.info("Generation started: month=%s, choices=%s, template=%s", month, choices_id, template_id)
 
     async with get_db() as db:
         row = await (await db.execute(
@@ -131,5 +136,13 @@ async def generate(body: dict):
     from app.domain.models import IssueSeverity
     error_count = sum(1 for i in all_issues if i.severity == IssueSeverity.ERROR)
     assigned_count = sum(1 for a in adapted["assignments"] if a["seat_id"])
+    logger.info(
+        "Generation complete: month=%s, assigned=%d, issues=%d, errors=%d",
+        month, assigned_count, len(all_issues), error_count,
+    )
+    if error_count:
+        for i in all_issues:
+            if i.severity == IssueSeverity.ERROR:
+                logger.warning("Issue [%s] %s — %s", i.issue_code, i.employee_name or "", i.description)
     return {"ok": True, "issues_count": len(all_issues),
             "error_count": error_count, "assigned_count": assigned_count}

@@ -6,9 +6,11 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 import openpyxl.utils
 
+import logging
 from app.database import get_db
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/seating/export")
@@ -140,4 +142,8 @@ async def override_seat(date: str, seat_id: str, body: dict):
                 (date, seat_id)
             )
         await db.commit()
+    if employee_name:
+        logger.info("Manual override: date=%s, seat=%s, employee=%s", date, seat_id, employee_name)
+    else:
+        logger.info("Seat cleared: date=%s, seat=%s", date, seat_id)
     return {"ok": True}
