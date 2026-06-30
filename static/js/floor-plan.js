@@ -135,6 +135,7 @@ App.floorPlan = (function () {
       g.addEventListener('mouseleave', _hideTip);
 
       g.addEventListener('click', function () {
+        if (App.dragDrop && App.dragDrop.fromSeatDragging()) return;
         _hideTip();
         App.state.set({ selectedSeat: desk.id, selectedEmployee: assignment ? assignment.employee_name : null });
         if (_opts.onSeatClick) _opts.onSeatClick(desk.id, assignment ? assignment.employee_name : null);
