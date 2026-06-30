@@ -9,6 +9,7 @@ App.dragDrop = (function () {
   function init() {
     _wireEmployeeChips();
     _wireSeatTargets();
+    _wireDropZones();
   }
 
   function _wireEmployeeChips() {
@@ -21,9 +22,15 @@ App.dragDrop = (function () {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', _draggedEmployee);
         chip.classList.add('dragging');
+        document.querySelectorAll('[data-drop-zone]').forEach(function (z) {
+          z.classList.add('drop-zone-visible');
+        });
       });
       chip.addEventListener('dragend', function () {
         chip.classList.remove('dragging');
+        document.querySelectorAll('[data-drop-zone]').forEach(function (z) {
+          z.classList.remove('drop-zone-visible', 'drag-over');
+        });
       });
     });
   }
@@ -60,6 +67,52 @@ App.dragDrop = (function () {
           App.seatingList.refresh();
         }).catch(function (err) {
           console.error('Drop failed:', err);
+        });
+
+        _draggedEmployee = null;
+        _draggedFromSeat = null;
+      });
+    });
+  }
+
+  function _wireDropZones() {
+    var zones = document.querySelectorAll('[data-drop-zone]');
+    zones.forEach(function (zone) {
+      zone.addEventListener('dragover', function (e) {
+        if (!_draggedEmployee) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        zone.classList.add('drag-over');
+      });
+      zone.addEventListener('dragleave', function (e) {
+        if (!zone.contains(e.relatedTarget)) {
+          zone.classList.remove('drag-over');
+        }
+      });
+      zone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        var employee = _draggedEmployee;
+        var fromSeat = _draggedFromSeat;
+        if (!employee) return;
+
+        var date = App.state.getDay();
+        if (!date) return;
+
+        var targetStatus = zone.dataset.dropZone === 'other' ? 'REMOTE' : null;
+        if (!targetStatus) return;
+
+        App.api.setEmployeeStatus(date, employee, targetStatus).then(function () {
+          return App.api.getSeating(App.state.getMonth(), date);
+        }).then(function (data) {
+          App.state.set({ assignments: data.assignments });
+          return App.api.getEmployees(date);
+        }).then(function (data) {
+          App.state.set({ employees: data.employees });
+          App.floorPlan.refresh();
+          App.seatingList.refresh();
+        }).catch(function (err) {
+          console.error('Drop zone failed:', err);
         });
 
         _draggedEmployee = null;

@@ -147,3 +147,26 @@ async def override_seat(date: str, seat_id: str, body: dict):
     else:
         logger.info("Seat cleared: date=%s, seat=%s", date, seat_id)
     return {"ok": True}
+
+
+@router.put("/seating/{date}/employee/{employee_name}/status")
+async def set_employee_status(date: str, employee_name: str, body: dict):
+    new_status = body.get("status", "REMOTE")
+    allowed = {"REMOTE", "VACATION", "DAY_OFF", "OFFICE"}
+    if new_status not in allowed:
+        raise HTTPException(400, f"Unknown status: {new_status}")
+    month = date[:7]
+    async with get_db() as db:
+        if new_status == "OFFICE":
+            await db.execute(
+                "UPDATE seat_assignments SET status=?, is_manual=1 WHERE date=? AND employee_name=?",
+                (new_status, date, employee_name),
+            )
+        else:
+            await db.execute(
+                "UPDATE seat_assignments SET seat_id=NULL, status=?, is_manual=1 WHERE date=? AND employee_name=?",
+                (new_status, date, employee_name),
+            )
+        await db.commit()
+    logger.info("Status override: date=%s, employee=%s -> %s", date, employee_name, new_status)
+    return {"ok": True}

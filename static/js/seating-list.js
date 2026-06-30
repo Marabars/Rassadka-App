@@ -71,6 +71,8 @@ App.seatingList = (function () {
     if (otherEmps.length || !search) {
       _container.appendChild(_section('other', 'Вне офиса', otherEmps));
     }
+
+    setTimeout(function () { if (App.dragDrop) App.dragDrop.init(); }, 0);
   }
 
   function _toolbar() {
@@ -108,10 +110,15 @@ App.seatingList = (function () {
   function _section(key, title, emps) {
     var wrap = U.el('div', { class: 'sl-section' });
 
-    var hdr = U.el('div', { class: 'sl-section-hdr' });
+    var hdrAttrs = { class: 'sl-section-hdr' };
+    if (key === 'other') hdrAttrs['data-drop-zone'] = 'other';
+    var hdr = U.el('div', hdrAttrs);
     var collapsed = _state.collapsed[key];
     var arrow = U.el('span', { class: 'sl-arrow', text: collapsed ? '▶' : '▼' });
     var label = U.el('span', { text: title + ' (' + emps.length + ')' });
+    if (key === 'other') {
+      hdr.appendChild(U.el('span', { class: 'sl-drop-hint', text: '⬇ перетащи сюда' }));
+    }
     hdr.appendChild(arrow);
     hdr.appendChild(label);
     hdr.addEventListener('click', function () {
