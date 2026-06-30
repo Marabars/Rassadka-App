@@ -503,3 +503,61 @@ input[type="month"]::-webkit-calendar-picker-indicator {
   max-height: calc(100vh - 260px);
   min-height: 200px;
 }
+
+/* --- Seating list toolbar ---------------------------------- */
+.sl-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.sl-search {
+  background: var(--surface);
+  color: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  width: 100%;
+  box-sizing: border-box;
+}
+.sl-search::placeholder { color: var(--text-muted); }
+.sl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sl-filter-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms;
+}
+.sl-filter-btn.active { opacity: 1; }
+.sl-filter-btn:not(.active) { opacity: 0.45; }
+
+/* --- Seating list sections --------------------------------- */
+.sl-section { margin-bottom: 4px; }
+.sl-section-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 6px;
+  user-select: none;
+}
+.sl-section-hdr:hover { background: var(--surface); }
+.sl-arrow { font-size: 10px; color: var(--accent); }
+
+/* --- Employee chips (white font override) ----------------- */
+.emp-chip { color: #fff; }
+.emp-name  { color: #fff; }
+.list-section-title { color: #fff; }
