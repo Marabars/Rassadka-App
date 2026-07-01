@@ -172,7 +172,7 @@ App.layoutEditor = (function () {
   }
 
   function _zoneSelect(id) {
-    var sel = U.el('select', { id: id, style: 'margin:0 8px; padding:6px 8px; background:#1C1A35; border:1px solid #2E2A4A; border-radius:4px; color:#E5E3EB; font-family:inherit; font-size:13px' });
+    var sel = U.el('select', { id: id, class: 'form-control', style: 'margin:0 8px' });
     ['top', 'mid-top', 'mid', 'right', 'bottom', 'custom'].forEach(function (z) {
       sel.appendChild(U.el('option', { value: z, text: z }));
     });
