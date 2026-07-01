@@ -108,17 +108,14 @@ App.seatingList = (function () {
   }
 
   function _section(key, title, emps) {
-    var wrap = U.el('div', { class: 'sl-section' });
+    var wrapAttrs = { class: 'sl-section' };
+    if (key === 'other') wrapAttrs['data-drop-zone'] = 'other';
+    var wrap = U.el('div', wrapAttrs);
 
-    var hdrAttrs = { class: 'sl-section-hdr' };
-    if (key === 'other') hdrAttrs['data-drop-zone'] = 'other';
-    var hdr = U.el('div', hdrAttrs);
+    var hdr = U.el('div', { class: 'sl-section-hdr' });
     var collapsed = _state.collapsed[key];
     var arrow = U.el('span', { class: 'sl-arrow', text: collapsed ? '▶' : '▼' });
     var label = U.el('span', { text: title + ' (' + emps.length + ')' });
-    if (key === 'other') {
-      hdr.appendChild(U.el('span', { class: 'sl-drop-hint', text: '⬇ перетащи сюда' }));
-    }
     hdr.appendChild(arrow);
     hdr.appendChild(label);
     hdr.addEventListener('click', function () {
